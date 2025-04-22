@@ -1,0 +1,23 @@
+{{- range $componentName, $component := .Values.components }}
+{{- if $component.enabled }}
+{{- $service := include "app.getService" (dict "component" $component "root" $) | fromYaml }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.fullname" $ }}-{{ $component.name }}
+  labels:
+    {{- include "app.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component.name }}
+spec:
+  type: {{ $service.type }}
+  ports:
+    - port: {{ $service.port }}
+      targetPort: {{ $service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "app.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component.name }}
+{{- end }}
+{{- end }} 

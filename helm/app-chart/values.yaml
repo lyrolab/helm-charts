@@ -1,0 +1,67 @@
+nameOverride: ""
+fullnameOverride: ""
+
+defaults:
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations: {}
+    hosts: []
+  image:
+    pullPolicy: IfNotPresent
+    tag: latest
+  secretName: ""
+  autoDetectSecrets: true
+
+components:
+  backend:
+    enabled: false
+    name: backend
+    replicaCount: 1
+    host: "localhost"
+    image:
+      repository:
+    service:
+      targetPort: 3000
+    resources:
+      limits:
+        cpu: 100m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
+    env:
+      PGSSLMODE: no-verify
+    initContainers:
+      - name: run-migrations
+        command: "npm run db:migrate"
+
+  frontend:
+    enabled: false
+    name: frontend
+    replicaCount: 1
+    image:
+      repository:
+    service:
+      targetPort: 3000
+    resources:
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 80
