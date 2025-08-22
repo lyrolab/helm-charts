@@ -22,6 +22,19 @@ spec:
         {{- include "app.selectorLabels" $ | nindent 8 }}
         app.kubernetes.io/component: {{ $component.name }}
     spec:
+      {{- $registrySecrets := list }}
+      {{- $secrets := lookup "v1" "Secret" $.Release.Namespace "" }}
+      {{- if $secrets }}
+        {{- range $k, $v := $secrets.items }}
+          {{- if hasSuffix "-registry" $v.metadata.name }}
+            {{- $registrySecrets = append $registrySecrets (dict "name" $v.metadata.name) }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if gt (len $registrySecrets) 0 }}
+      imagePullSecrets:
+        {{- toYaml $registrySecrets | nindent 8 }}
+      {{- end }}
       {{- $secretName := $component.secretName | default "" }}
       {{- if $.Values.defaults.autoDetectSecrets }}
         {{- $defaultSecretName := printf "%s-%s-secrets" (include "app.fullname" $) $component.name }}
@@ -43,6 +56,7 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- end }}
+            {{- include "app.backendEnvVars" (dict "component" $component "root" $) | nindent 12 }}
           {{- if $secretName }}
           envFrom:
             - secretRef:
@@ -65,17 +79,22 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- end }}
-            {{- if eq $component.name "backend" }}
-            - name: SERVER_URL
-              value: "https://{{ $component.host }}/api"
+            {{- include "app.backendEnvVars" (dict "component" $component "root" $) | nindent 12 }}
+            {{- if eq $component.name "frontend" }}
+            - name: NEXTAUTH_URL
+              value: "https://{{ $component.host }}/auth"
             {{- end}}
-            {{- if and (eq $component.name "backend") ($.Values.components.frontend.enabled) }}
-            - name: FRONTEND_URL
-              value: "https://{{ $.Values.components.frontend.host }}"
-            {{- end }}
             {{- if and (eq $component.name "frontend") ($.Values.components.backend.enabled) }}
             - name: NEXT_PUBLIC_BACKEND_URL
               value: "https://{{ $.Values.components.backend.host }}/api"
+            {{- end }}
+            {{- if and (eq $component.name "frontend") ($.Values.keycloak.realm) }}
+            - name: NEXT_PUBLIC_KEYCLOAK_REALM
+              value: {{ $.Values.keycloak.realm | quote }}
+            - name: NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
+              value: "app"
+            - name: NEXT_PUBLIC_KEYCLOAK_URL
+              value: "https://sso.lyrolab.fr"
             {{- end }}
           {{- if $secretName }}
           envFrom:

@@ -76,4 +76,28 @@ Get service settings with defaults
 type: {{ $component.service.type | default $root.Values.defaults.service.type }}
 port: {{ $component.service.port | default $root.Values.defaults.service.port }}
 targetPort: {{ $component.service.targetPort }}
+{{- end -}}
+
+{{/*
+Backend environment variables
+*/}}
+{{- define "app.backendEnvVars" -}}
+{{- $component := .component -}}
+{{- $root := .root -}}
+{{- if eq $component.name "backend" }}
+- name: SERVER_URL
+  value: "https://{{ $component.host }}/api"
+{{- end}}
+{{- if and (eq $component.name "backend") ($root.Values.components.frontend.enabled) }}
+- name: FRONTEND_URL
+  value: "https://{{ $root.Values.components.frontend.host }}"
+{{- end }}
+{{- if and (eq $component.name "backend") ($root.Values.keycloak.realm) }}
+- name: KEYCLOAK_REALM
+  value: {{ $root.Values.keycloak.realm | quote }}
+- name: KEYCLOAK_CLIENT_ID
+  value: "app"
+- name: KEYCLOAK_URL
+  value: "https://sso.lyrolab.fr"
+{{- end }}
 {{- end -}} 
