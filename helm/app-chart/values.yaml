@@ -33,6 +33,8 @@ components:
       repository:
     service:
       targetPort: 3000
+    ingress:
+      path: "/api(/|$)(.*)"
     resources:
       limits:
         cpu: 100m

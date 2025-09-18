@@ -14,8 +14,10 @@
   {{- end }}
 {{- end }}
 {{- $path := "/" }}
-{{- if eq $componentName "backend" }}
-{{- $path = "/api(/|$)(.*)" }}
+{{- if hasKey $component "ingress" }}
+  {{- if $component.ingress.path }}
+  {{- $path = $component.ingress.path }}
+  {{- end }}
 {{- end }}
 ---
 apiVersion: networking.k8s.io/v1
@@ -26,7 +28,7 @@ metadata:
     {{- include "app.labels" $ | nindent 4 }}
     app.kubernetes.io/component: {{ $component.name }}
   annotations:
-    {{- if eq $componentName "backend" }}
+    {{- if and (hasKey $component "ingress") (ne $component.ingress.path "/") }}
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     {{- end }}
     {{- if hasKey $component "ingress" }}
@@ -49,7 +51,7 @@ spec:
       http:
         paths:
           - path: {{ $path }}
-            pathType: {{ if eq $componentName "backend" }}ImplementationSpecific{{ else }}Prefix{{ end }}
+            pathType: {{ if and (hasKey $component "ingress") (ne $component.ingress.path "/") }}ImplementationSpecific{{ else }}Prefix{{ end }}
             backend:
               service:
                 name: {{ $fullName }}-{{ $component.name }}
