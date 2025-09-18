@@ -1,6 +1,6 @@
 {{- range $componentName, $component := .Values.components }}
 {{- $ingressEnabled := false }}
-{{- if hasKey $component "ingress" }}
+{{- if and (hasKey $component "ingress") (hasKey $component.ingress "enabled") }}
   {{- $ingressEnabled = $component.ingress.enabled }}
 {{- else }}
   {{- $ingressEnabled = $.Values.defaults.ingress.enabled }}
