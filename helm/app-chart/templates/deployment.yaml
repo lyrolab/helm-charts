@@ -108,6 +108,18 @@ spec:
             {{- toYaml $.Values.defaults.resources | nindent 12 }}
             {{- end }}
           {{- if eq $component.name "backend" }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
           {{- end }}
 {{- end }}
 {{- end }}
