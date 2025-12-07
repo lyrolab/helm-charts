@@ -9,7 +9,8 @@ metadata:
     {{- include "app.labels" $ | nindent 4 }}
     app.kubernetes.io/component: {{ $component.name }}
 spec:
-  {{- if not $component.autoscaling.enabled }}
+  {{- $autoscaling := $component.autoscaling | default $.Values.defaults.autoscaling }}
+  {{- if not $autoscaling.enabled }}
   replicas: {{ $component.replicaCount | default 1 }}
   {{- end }}
   selector:
