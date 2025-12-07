@@ -1,19 +1,20 @@
 {{- range $componentName, $component := .Values.components }}
+{{- $componentNameValue := $component.name | default $componentName }}
 {{- $autoscaling := $component.autoscaling | default $.Values.defaults.autoscaling }}
 {{- if and $component.enabled $autoscaling.enabled }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "app.fullname" $ }}-{{ $component.name }}
+  name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
   labels:
     {{- include "app.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $component.name }}
+    app.kubernetes.io/component: {{ $componentNameValue }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "app.fullname" $ }}-{{ $component.name }}
+    name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
   minReplicas: {{ $autoscaling.minReplicas }}
   maxReplicas: {{ $autoscaling.maxReplicas }}
   metrics:

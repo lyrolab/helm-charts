@@ -1,4 +1,5 @@
 {{- range $componentName, $component := .Values.components }}
+{{- $componentNameValue := $component.name | default $componentName }}
 {{- $ingressEnabled := false }}
 {{- if and (hasKey $component "ingress") (hasKey $component.ingress "enabled") }}
   {{- $ingressEnabled = $component.ingress.enabled }}
@@ -23,10 +24,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $fullName }}-{{ $component.name }}
+  name: {{ $fullName }}-{{ $componentNameValue }}
   labels:
     {{- include "app.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $component.name }}
+    app.kubernetes.io/component: {{ $componentNameValue }}
   annotations:
     {{- if and (hasKey $component "ingress") (ne $component.ingress.path "/") }}
     nginx.ingress.kubernetes.io/rewrite-target: /$2
@@ -54,7 +55,7 @@ spec:
             pathType: {{ if and (hasKey $component "ingress") (ne $component.ingress.path "/") }}ImplementationSpecific{{ else }}Prefix{{ end }}
             backend:
               service:
-                name: {{ $fullName }}-{{ $component.name }}
+                name: {{ $fullName }}-{{ $componentNameValue }}
                 port:
                   number: {{ $svcPort }}
 {{- end }}

@@ -1,14 +1,15 @@
 {{- range $componentName, $component := .Values.components }}
 {{- if $component.enabled }}
+{{- $componentNameValue := $component.name | default $componentName }}
 {{- $service := include "app.getService" (dict "component" $component "root" $) | fromYaml }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "app.fullname" $ }}-{{ $component.name }}
+  name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
   labels:
     {{- include "app.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $component.name }}
+    app.kubernetes.io/component: {{ $componentNameValue }}
 spec:
   type: {{ $service.type }}
   ports:
@@ -18,6 +19,6 @@ spec:
       name: http
   selector:
     {{- include "app.selectorLabels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $component.name }}
+    app.kubernetes.io/component: {{ $componentNameValue }}
 {{- end }}
 {{- end }} 

@@ -1,13 +1,14 @@
 {{- range $componentName, $component := .Values.components }}
 {{- if $component.enabled }}
+{{- $componentNameValue := $component.name | default $componentName }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "app.fullname" $ }}-{{ $component.name }}
+  name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
   labels:
     {{- include "app.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $component.name }}
+    app.kubernetes.io/component: {{ $componentNameValue }}
 spec:
   {{- $autoscaling := $component.autoscaling | default $.Values.defaults.autoscaling }}
   {{- if not $autoscaling.enabled }}
@@ -16,12 +17,12 @@ spec:
   selector:
     matchLabels:
       {{- include "app.selectorLabels" $ | nindent 6 }}
-      app.kubernetes.io/component: {{ $component.name }}
+      app.kubernetes.io/component: {{ $componentNameValue }}
   template:
     metadata:
       labels:
         {{- include "app.selectorLabels" $ | nindent 8 }}
-        app.kubernetes.io/component: {{ $component.name }}
+        app.kubernetes.io/component: {{ $componentNameValue }}
     spec:
       {{- $registrySecrets := list }}
       {{- $secrets := lookup "v1" "Secret" $.Release.Namespace "" }}
@@ -38,7 +39,6 @@ spec:
       {{- end }}
       {{- $secretName := $component.secretName | default "" }}
       {{- if $.Values.defaults.autoDetectSecrets }}
-        {{- $componentNameValue := $component.name | default $componentName }}
         {{- $defaultSecretName := printf "%s-%s-secrets" (include "app.fullname" $) $componentNameValue }}
         {{- $secretExists := lookup "v1" "Secret" $.Release.Namespace $defaultSecretName }}
         {{- if $secretExists }}
@@ -67,7 +67,7 @@ spec:
         {{- end }}
       {{- end }}
       containers:
-        - name: {{ $component.name }}
+        - name: {{ $componentNameValue }}
           image: "{{ $component.image.repository }}:{{ $component.image.tag | default $.Values.defaults.image.tag }}"
           imagePullPolicy: {{ $component.image.pullPolicy | default $.Values.defaults.image.pullPolicy }}
           ports:
@@ -82,15 +82,15 @@ spec:
             {{- end }}
             {{- end }}
             {{- include "app.backendEnvVars" (dict "component" $component "root" $) | nindent 12 }}
-            {{- if eq $component.name "frontend" }}
+            {{- if eq $componentNameValue "frontend" }}
             - name: NEXTAUTH_URL
               value: "https://{{ $component.host }}/auth"
             {{- end}}
-            {{- if and (eq $component.name "frontend") ($.Values.components.backend.enabled) }}
+            {{- if and (eq $componentNameValue "frontend") ($.Values.components.backend.enabled) }}
             - name: NEXT_PUBLIC_BACKEND_URL
               value: "https://{{ $.Values.components.backend.host }}/api"
             {{- end }}
-            {{- if and (eq $component.name "frontend") ($.Values.keycloak.realm) }}
+            {{- if and (eq $componentNameValue "frontend") ($.Values.keycloak.realm) }}
             - name: NEXT_PUBLIC_KEYCLOAK_REALM
               value: {{ $.Values.keycloak.realm | quote }}
             - name: NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
@@ -109,7 +109,7 @@ spec:
             {{- else }}
             {{- toYaml $.Values.defaults.resources | nindent 12 }}
             {{- end }}
-          {{- if eq $component.name "backend" }}
+          {{- if eq $componentNameValue "backend" }}
           livenessProbe:
             httpGet:
               path: /health
