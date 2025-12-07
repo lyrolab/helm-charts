@@ -100,7 +100,10 @@ Backend environment variables
 - name: KEYCLOAK_URL
   value: "https://sso.lyrolab.fr"
 {{- end }}
-{{- $otelEnabled := $component.otel.enabled | default $root.Values.defaults.otel.enabled -}}
+{{- $otelEnabled := $root.Values.defaults.otel.enabled }}
+{{- if $component.otel }}
+  {{- $otelEnabled = $component.otel.enabled | default $root.Values.defaults.otel.enabled }}
+{{- end }}
 {{- if $otelEnabled }}
 - name: OTEL_EXPORTER_URL
   value: "http://otelcol-dev-collector.lyro-opentelemetry.svc.cluster.local:4317"
