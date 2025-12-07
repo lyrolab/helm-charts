@@ -1,5 +1,6 @@
 {{- range $componentName, $component := .Values.components }}
-{{- if and $component.enabled $component.autoscaling.enabled }}
+{{- $autoscaling := $component.autoscaling | default $.Values.defaults.autoscaling }}
+{{- if and $component.enabled $autoscaling.enabled }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -13,14 +14,14 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "app.fullname" $ }}-{{ $component.name }}
-  minReplicas: {{ $component.autoscaling.minReplicas }}
-  maxReplicas: {{ $component.autoscaling.maxReplicas }}
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ $component.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ $autoscaling.targetCPUUtilizationPercentage }}
 {{- end }}
 {{- end }} 
