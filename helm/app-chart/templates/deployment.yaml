@@ -38,7 +38,8 @@ spec:
       {{- end }}
       {{- $secretName := $component.secretName | default "" }}
       {{- if $.Values.defaults.autoDetectSecrets }}
-        {{- $defaultSecretName := printf "%s-%s-secrets" (include "app.fullname" $) $component.name }}
+        {{- $componentNameValue := $component.name | default $componentName }}
+        {{- $defaultSecretName := printf "%s-%s-secrets" (include "app.fullname" $) $componentNameValue }}
         {{- $secretExists := lookup "v1" "Secret" $.Release.Namespace $defaultSecretName }}
         {{- if $secretExists }}
           {{- $secretName = $defaultSecretName }}
