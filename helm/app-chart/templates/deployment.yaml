@@ -58,6 +58,8 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- end }}
+            - name: APP_STAGE
+              value: {{ $.Values.stage | quote }}
             {{- include "app.backendEnvVars" (dict "component" $component "root" $) | nindent 12 }}
           {{- if $secretName }}
           envFrom:
@@ -81,6 +83,8 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- end }}
+            - name: APP_STAGE
+              value: {{ $.Values.stage | quote }}
             {{- include "app.backendEnvVars" (dict "component" $component "root" $) | nindent 12 }}
             {{- if eq $componentNameValue "frontend" }}
             - name: NEXTAUTH_URL
