@@ -80,5 +80,9 @@ components:
       maxReplicas: 5
       targetCPUUtilizationPercentage: 80
 
+posthog:
+  enabled: false
+  host: ""
+
 keycloak:
   realm:

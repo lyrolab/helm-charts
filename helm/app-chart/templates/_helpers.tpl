@@ -108,4 +108,18 @@ Backend environment variables
 - name: OTEL_EXPORTER_URL
   value: "http://otelcol-dev-collector.lyro-opentelemetry.svc.cluster.local:4317"
 {{- end }}
+{{- end -}}
+
+{{/*
+PostHog domain (EU region)
+*/}}
+{{- define "app.posthogDomain" -}}
+eu.i.posthog.com
+{{- end -}}
+
+{{/*
+PostHog assets domain (EU region)
+*/}}
+{{- define "app.posthogAssetsDomain" -}}
+eu-assets.i.posthog.com
 {{- end -}} 

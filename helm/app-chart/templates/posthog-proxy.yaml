@@ -1,0 +1,71 @@
+{{- if .Values.posthog.enabled }}
+{{- $fullName := include "app.fullname" . }}
+{{- $posthogDomain := include "app.posthogDomain" . }}
+{{- $posthogAssetsDomain := include "app.posthogAssetsDomain" . }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-posthog
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: posthog-proxy
+  annotations:
+    nginx.ingress.kubernetes.io/upstream-vhost: {{ $posthogDomain }}
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_name "{{ $posthogDomain }}";
+      proxy_ssl_server_name on;
+spec:
+  ingressClassName: {{ .Values.defaults.ingress.className }}
+  rules:
+    - host: {{ .Values.posthog.host | quote }}
+      http:
+        paths:
+          - path: /static
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-posthog-assets
+                port:
+                  number: 443
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullName }}-posthog-proxy
+                port:
+                  number: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-posthog-proxy
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: posthog-proxy
+spec:
+  type: ExternalName
+  externalName: {{ $posthogDomain }}
+  ports:
+    - name: https
+      protocol: TCP
+      port: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-posthog-assets
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: posthog-assets
+spec:
+  type: ExternalName
+  externalName: {{ $posthogAssetsDomain }}
+  ports:
+    - name: https
+      protocol: TCP
+      port: 443
+{{- end }}
+
+
