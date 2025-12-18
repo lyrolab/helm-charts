@@ -100,6 +100,10 @@ Backend environment variables
 - name: KEYCLOAK_URL
   value: "https://sso.lyrolab.fr"
 {{- end }}
+{{- if and (eq $component.name "backend") ($root.Values.posthog.enabled) }}
+- name: POSTHOG_HOST
+  value: "https://{{ $root.Values.posthog.host }}"
+{{- end }}
 {{- $otelEnabled := $root.Values.defaults.otel.enabled }}
 {{- if $component.otel }}
   {{- $otelEnabled = $component.otel.enabled | default $root.Values.defaults.otel.enabled }}

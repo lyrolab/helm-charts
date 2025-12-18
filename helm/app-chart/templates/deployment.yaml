@@ -102,6 +102,10 @@ spec:
             - name: NEXT_PUBLIC_KEYCLOAK_URL
               value: "https://sso.lyrolab.fr"
             {{- end }}
+            {{- if and (eq $componentNameValue "frontend") ($.Values.posthog.enabled) }}
+            - name: NEXT_PUBLIC_POSTHOG_HOST
+              value: "https://{{ $.Values.posthog.host }}"
+            {{- end }}
           {{- if $secretName }}
           envFrom:
             - secretRef:
