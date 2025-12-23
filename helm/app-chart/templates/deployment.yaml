@@ -117,7 +117,7 @@ spec:
             {{- else }}
             {{- toYaml $.Values.defaults.resources | nindent 12 }}
             {{- end }}
-          {{- if eq $componentNameValue "backend" }}
+          {{- if $component.probes.enabled }}
           livenessProbe:
             httpGet:
               path: /health

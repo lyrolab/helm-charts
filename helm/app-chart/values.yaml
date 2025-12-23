@@ -59,6 +59,8 @@ components:
       PGSSLMODE: no-verify
     otel:
       enabled: true
+    probes:
+      enabled: true
     initContainers:
       - name: run-migrations
         command: "npm run db:migrate"
