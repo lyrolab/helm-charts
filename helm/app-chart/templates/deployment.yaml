@@ -93,13 +93,21 @@ spec:
             {{- if and (eq $componentNameValue "frontend") ($.Values.components.backend.enabled) }}
             - name: NEXT_PUBLIC_BACKEND_URL
               value: "https://{{ $.Values.components.backend.host }}/api"
+            - name: VITE_BACKEND_URL
+              value: "https://{{ $.Values.components.backend.host }}/api"
             {{- end }}
             {{- if and (eq $componentNameValue "frontend") ($.Values.keycloak.realm) }}
             - name: NEXT_PUBLIC_KEYCLOAK_REALM
               value: {{ $.Values.keycloak.realm | quote }}
+            - name: VITE_KEYCLOAK_REALM
+              value: {{ $.Values.keycloak.realm | quote }}
             - name: NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
               value: "app"
+            - name: VITE_KEYCLOAK_CLIENT_ID
+              value: "app"
             - name: NEXT_PUBLIC_KEYCLOAK_URL
+              value: "https://sso.lyrolab.fr"
+            - name: VITE_KEYCLOAK_URL
               value: "https://sso.lyrolab.fr"
             {{- end }}
             {{- if and (eq $componentNameValue "frontend") ($.Values.posthog.enabled) }}
