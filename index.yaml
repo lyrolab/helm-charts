@@ -3,12 +3,12 @@ entries:
   app-chart:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2026-02-15T16:34:05.902142203Z"
+    created: "2026-03-12T21:08:56.758123793Z"
     description: A generic Helm chart for deploying applications
-    digest: 3eb70f0677e6d82225315515f7c8ec0ff7f9b4507ee85805931e3a2e15ebc50f
+    digest: d83784692f60d1ec116f08d6c90262f0d02482f5b6905713ea8b23d9ea98ffc8
     name: app-chart
     type: application
     urls:
     - https://lyrolab.github.io/helm-charts/app-chart-0.1.0.tgz
     version: 0.1.0
-generated: "2026-02-15T16:34:05.901539521Z"
+generated: "2026-03-12T21:08:56.757514765Z"
