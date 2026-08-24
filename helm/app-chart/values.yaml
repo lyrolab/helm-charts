@@ -3,13 +3,30 @@ nameOverride: ""
 fullnameOverride: ""
 
 defaults:
+  # Requests size the node pool; limits only cap burst. Requests stay small so
+  # scheduling cost is unchanged, while the CPU limit is wide enough that a
+  # container can burn through boot instead of being throttled past its probes.
   resources:
     limits:
-      cpu: 100m
+      cpu: 1000m
       memory: 128Mi
     requests:
       cpu: 100m
       memory: 128Mi
+  # The startup probe owns boot: liveness and readiness do not run until it
+  # passes, so a slow start can never be mistaken for a hung process.
+  probes:
+    enabled: false
+    path: /health
+    startup:
+      periodSeconds: 5
+      failureThreshold: 60
+    liveness:
+      periodSeconds: 10
+      failureThreshold: 3
+    readiness:
+      periodSeconds: 5
+      failureThreshold: 3
   service:
     type: ClusterIP
     port: 80
@@ -46,7 +63,7 @@ components:
       path: "/api(/|$)(.*)"
     resources:
       limits:
-        cpu: 100m
+        cpu: 1000m
         memory: 256Mi
       requests:
         cpu: 100m

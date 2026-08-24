@@ -127,19 +127,26 @@ spec:
             {{- else }}
             {{- toYaml $.Values.defaults.resources | nindent 12 }}
             {{- end }}
-          {{- if and $component.probes $component.probes.enabled }}
+          {{- $probes := mergeOverwrite (deepCopy $.Values.defaults.probes) ($component.probes | default dict) }}
+          {{- if $probes.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ $probes.path }}
+              port: http
+            periodSeconds: {{ $probes.startup.periodSeconds }}
+            failureThreshold: {{ $probes.startup.failureThreshold }}
           livenessProbe:
             httpGet:
-              path: /health
+              path: {{ $probes.path }}
               port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            periodSeconds: {{ $probes.liveness.periodSeconds }}
+            failureThreshold: {{ $probes.liveness.failureThreshold }}
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ $probes.path }}
               port: http
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            periodSeconds: {{ $probes.readiness.periodSeconds }}
+            failureThreshold: {{ $probes.readiness.failureThreshold }}
           {{- end }}
 {{- end }}
 {{- end }}
