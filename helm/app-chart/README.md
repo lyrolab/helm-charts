@@ -68,19 +68,39 @@ helm install my-app ./app-chart -f values.yaml
 
 ### 6. Resources
 - Set per component, or use global defaults via `defaults.resources`.
+- A component's `resources` block replaces the default block outright — it is not merged — so set both `limits` and `requests` when you override.
+- Defaults deliberately keep `requests` low and `limits` wide. Requests are what the scheduler reserves, and therefore what drives node-pool cost; limits only cap burst. A container that does real work at startup (framework bootstrap, migrations, telemetry SDK init) needs far more CPU for its first minute than it will ever use again, and a `requests == limits` budget denies it that burst.
 
-### 7. Init Containers
+### 7. Probes
+- Enable per component with `probes.enabled: true` (on by default for `backend`).
+- Three probes are emitted against `probes.path` (default `/health`) on the component's HTTP port: `startupProbe`, `livenessProbe`, `readinessProbe`.
+- The startup probe owns boot. Kubernetes runs neither liveness nor readiness until it succeeds, so boot duration and hang detection are independent knobs. The default budget is `periodSeconds: 5 × failureThreshold: 60` = 5 minutes.
+- Timings are configurable at `defaults.probes` and per component; a component's block is deep-merged over the defaults, so `probes: { startup: { failureThreshold: 120 } }` keeps every other setting.
+
+```yaml
+components:
+  worker:
+    probes:
+      enabled: true
+      path: /healthz
+      startup:
+        failureThreshold: 120
+```
+
+**Diagnosing a boot that gets killed.** A container SIGKILLed by a failing liveness probe reports `exitCode: 137` with `reason: Error`. That is not `reason: OOMKilled` — 137 alone does not mean the container ran out of memory. If the events show `Liveness probe failed: connection refused` and `kubectl top` shows CPU pinned at the limit, the container is being CPU-throttled through its probe window: widen `limits.cpu` and/or `probes.startup.failureThreshold`.
+
+### 8. Init Containers
 - Define `initContainers` as a list per component, each with `name` and `command`.
 
-### 8. Autoscaling
+### 9. Autoscaling
 - If `autoscaling.enabled` is true, an HPA is created for the component.
 - Configure min/max replicas and CPU utilization threshold.
 
-### 9. Services
+### 10. Services
 - Each component gets a Service named `<release>-<component>`.
 - Service type/port can be set per component or via `defaults.service`.
 
-### 10. Ingress
+### 11. Ingress
 - Ingress is enabled by default (`defaults.ingress.enabled: true`).
 - Each component can override ingress settings.
 - For `backend`, path is `/api(/|$)(.*)` with rewrite; for others, `/`.
