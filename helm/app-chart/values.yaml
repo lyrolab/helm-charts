@@ -30,6 +30,7 @@ defaults:
     targetCPUUtilizationPercentage: 80
   otel:
     enabled: true
+    exporterUrl: "http://otelcol-collector.observability.svc.cluster.local:4317"
 
 components:
   backend:

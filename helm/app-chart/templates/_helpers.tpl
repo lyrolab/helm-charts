@@ -105,12 +105,14 @@ Backend environment variables
   value: "https://{{ $root.Values.posthog.host }}"
 {{- end }}
 {{- $otelEnabled := $root.Values.defaults.otel.enabled }}
+{{- $otelExporterUrl := $root.Values.defaults.otel.exporterUrl }}
 {{- if $component.otel }}
   {{- $otelEnabled = $component.otel.enabled | default $root.Values.defaults.otel.enabled }}
+  {{- $otelExporterUrl = $component.otel.exporterUrl | default $root.Values.defaults.otel.exporterUrl }}
 {{- end }}
 {{- if $otelEnabled }}
 - name: OTEL_EXPORTER_URL
-  value: "http://otelcol-dev-collector.lyro-opentelemetry.svc.cluster.local:4317"
+  value: {{ $otelExporterUrl | quote }}
 {{- end }}
 {{- end -}}
 
