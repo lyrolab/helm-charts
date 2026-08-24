@@ -45,8 +45,10 @@ jobs:
 
       - name: Create or Update gh-pages branch
         run: |
+          # Keep every previously published .tgz in the tree: `helm repo index`
+          # rebuilds the index from the charts it finds on disk, so clearing the
+          # branch first would drop all versions except the one just packaged.
           git checkout gh-pages || git checkout -b gh-pages
-          git rm -rf . || true
           cp -r .packages/* .
           rm -rf .packages
           helm repo index . --url https://${{ github.repository_owner }}.github.io/helm-charts
