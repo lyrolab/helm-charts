@@ -85,13 +85,13 @@ spec:
             - name: VITE_KEYCLOAK_REALM
               value: {{ $.Values.keycloak.realm | quote }}
             - name: NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
-              value: "app"
+              value: {{ $.Values.keycloak.frontendClientId | quote }}
             - name: VITE_KEYCLOAK_CLIENT_ID
-              value: "app"
+              value: {{ $.Values.keycloak.frontendClientId | quote }}
             - name: NEXT_PUBLIC_KEYCLOAK_URL
-              value: "https://sso.lyrolab.fr"
+              value: {{ $.Values.keycloak.url | quote }}
             - name: VITE_KEYCLOAK_URL
-              value: "https://sso.lyrolab.fr"
+              value: {{ $.Values.keycloak.url | quote }}
             {{- end }}
             {{- if and (eq $componentNameValue "frontend") ($.Values.posthog.enabled) }}
             - name: NEXT_PUBLIC_POSTHOG_HOST

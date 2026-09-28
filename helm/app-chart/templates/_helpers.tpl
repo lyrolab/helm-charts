@@ -87,9 +87,9 @@ Backend environment variables
 - name: KEYCLOAK_REALM
   value: {{ $root.Values.keycloak.realm | quote }}
 - name: KEYCLOAK_CLIENT_ID
-  value: "app"
+  value: {{ $root.Values.keycloak.clientId | quote }}
 - name: KEYCLOAK_URL
-  value: "https://sso.lyrolab.fr"
+  value: {{ $root.Values.keycloak.url | quote }}
 {{- end }}
 {{- if and (eq $component.name "backend") ($root.Values.posthog.enabled) }}
 - name: POSTHOG_HOST

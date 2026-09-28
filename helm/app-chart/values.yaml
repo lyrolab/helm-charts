@@ -40,6 +40,24 @@ defaults:
     className: "nginx"
     annotations: {}
     hosts: []
+    # Sent on every response through a `configuration-snippet`. An empty value
+    # drops that header. The HSTS value matches what ingress-nginx already sends
+    # on HTTPS, so it only pins what browsers see today.
+    securityHeaders:
+      enabled: true
+      hsts: "max-age=31536000; includeSubDomains"
+      contentTypeOptions: nosniff
+      referrerPolicy: strict-origin-when-cross-origin
+      frameOptions: SAMEORIGIN
+      permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+    # Requests per second per client IP; unset leaves the ingress unlimited.
+    rateLimit:
+      rps:
+      burstMultiplier: 5
+    # ingress-nginx redirects HTTP to HTTPS once an ingress declares TLS.
+    tls:
+      enabled: false
+      secretName: lyrolab-fr-tls
   image:
     pullPolicy: IfNotPresent
     tag: latest
@@ -113,5 +131,9 @@ posthog:
   enabled: false
   host: ""
 
+# Keycloak env vars are rendered only when `realm` is set.
 keycloak:
   realm:
+  url: https://sso.lyrolab.fr
+  clientId: app
+  frontendClientId: app
