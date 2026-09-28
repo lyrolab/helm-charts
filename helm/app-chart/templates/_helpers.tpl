@@ -129,3 +129,14 @@ PostHog assets domain (EU region)
 {{- define "app.posthogAssetsDomain" -}}
 eu-assets.i.posthog.com
 {{- end -}} 
+
+{{/*
+ServiceAccount used by every component
+*/}}
+{{- define "app.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- default (include "app.fullname" .) .Values.serviceAccount.name -}}
+{{- else -}}
+{{- default "default" .Values.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}

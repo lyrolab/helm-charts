@@ -2,6 +2,11 @@ stage: ""
 nameOverride: ""
 fullnameOverride: ""
 
+serviceAccount:
+  create: false
+  name: ""
+  imagePullSecrets: []
+
 defaults:
   # Requests size the node pool; limits only cap burst. Requests stay small so
   # scheduling cost is unchanged, while the CPU limit is wide enough that a
@@ -38,8 +43,6 @@ defaults:
   image:
     pullPolicy: IfNotPresent
     tag: latest
-  secretName: ""
-  autoDetectSecrets: true
   autoscaling:
     enabled: false
     minReplicas: 1

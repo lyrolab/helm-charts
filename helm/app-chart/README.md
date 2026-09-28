@@ -6,7 +6,7 @@ A convention-driven, multi-component Helm chart for deploying applications with 
 
 - **Convention over configuration**: Most settings are auto-detected or have smart defaults.
 - **Component-based**: Define multiple components (e.g., backend, frontend) in your `values.yaml`.
-- **Automatic secrets and image pull secrets handling**
+- **Convention-based secrets and a templated ServiceAccount for image pull secrets, with no Helm `lookup`** (renders the same under ArgoCD as under `helm install`)
 - **Standardized labels, selectors, and resource management**
 - **Ingress, Service, Deployment, and Autoscaling support**
 
@@ -54,11 +54,24 @@ helm install my-app ./app-chart -f values.yaml
 
 ### 3. Images & Pull Secrets
 - Each component defines its own image repo/tag.
-- Any secret in the namespace ending with `-registry` is added to `imagePullSecrets` automatically.
+- Pull secrets are declared on a ServiceAccount the chart creates and every component runs as:
+
+```yaml
+serviceAccount:
+  create: true
+  imagePullSecrets:
+    - github-registry
+```
+
+- The ServiceAccount is named after the release unless `serviceAccount.name` is set. With `create: false`, a non-empty `serviceAccount.name` points pods at an existing ServiceAccount; otherwise pods run as the namespace `default` ServiceAccount.
 
 ### 4. Secrets
-- If `defaults.autoDetectSecrets: true`, the chart looks for a secret named `<release>-<component>-secrets` and mounts it as `envFrom`.
-- You can override the secret name per component with `secretName`.
+- Every component mounts `<release>-<component>-secrets` as `envFrom` with `optional: true`, so the pod starts whether or not that secret exists.
+- `secretName` per component overrides the name; an explicit `secretName` is mounted without `optional`, so a missing secret blocks the pod instead of starting it without its configuration.
+
+### Breaking changes in 0.4.0
+- Pull secrets are no longer discovered from secrets ending in `-registry`. Declare them under `serviceAccount.imagePullSecrets` with `serviceAccount.create: true`.
+- `defaults.autoDetectSecrets` and `defaults.secretName` are removed. The convention secret is always referenced (optionally), and `components.<name>.secretName` remains the override.
 
 ### 5. Environment Variables
 - Define `env` as a map per component.
@@ -112,7 +125,6 @@ components:
 
 ```yaml
 defaults:
-  autoDetectSecrets: true
   resources:
     limits:
       cpu: 500m
