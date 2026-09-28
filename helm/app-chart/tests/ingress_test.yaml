@@ -1,0 +1,48 @@
+suite: ingress
+templates:
+  - templates/ingress.yaml
+release:
+  name: demo
+set:
+  components.backend.enabled: true
+  components.backend.host: demo.lyrolab.fr
+  components.backend.image.repository: ghcr.io/lyrolab/demo-backend
+  components.frontend.enabled: true
+  components.frontend.host: demo.lyrolab.fr
+  components.frontend.image.repository: ghcr.io/lyrolab/demo-frontend
+tests:
+  - it: routes the backend under /api with a rewrite
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    asserts:
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/rewrite-target"]
+          value: /$2
+      - equal:
+          path: spec.rules[0].http.paths[0]
+          value:
+            path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: demo-app-chart-backend
+                port:
+                  number: 80
+
+  - it: routes the frontend at / without a rewrite
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-frontend
+    asserts:
+      - notExists:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/rewrite-target"]
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+      - equal:
+          path: spec.ingressClassName
+          value: nginx

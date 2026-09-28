@@ -1,0 +1,40 @@
+name: Lint and Test Helm Chart
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-test:
+    runs-on: ubicloud-standard-2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.19.0
+
+      - name: Install Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Install chart-testing
+        uses: helm/chart-testing-action@v2.8.0
+
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.1.2
+
+      - name: Helm lint
+        run: helm lint --strict helm/app-chart
+
+      - name: Chart-testing lint
+        run: ct lint --config ct.yaml --check-version-increment
+
+      - name: Helm unittest
+        run: helm unittest helm/app-chart
