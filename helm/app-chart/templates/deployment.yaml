@@ -24,27 +24,10 @@ spec:
         {{- include "app.selectorLabels" $ | nindent 8 }}
         app.kubernetes.io/component: {{ $componentNameValue }}
     spec:
-      {{- $registrySecrets := list }}
-      {{- $secrets := lookup "v1" "Secret" $.Release.Namespace "" }}
-      {{- if $secrets }}
-        {{- range $k, $v := $secrets.items }}
-          {{- if hasSuffix "-registry" $v.metadata.name }}
-            {{- $registrySecrets = append $registrySecrets (dict "name" $v.metadata.name) }}
-          {{- end }}
-        {{- end }}
+      {{- if or $.Values.serviceAccount.create $.Values.serviceAccount.name }}
+      serviceAccountName: {{ include "app.serviceAccountName" $ }}
       {{- end }}
-      {{- if gt (len $registrySecrets) 0 }}
-      imagePullSecrets:
-        {{- toYaml $registrySecrets | nindent 8 }}
-      {{- end }}
-      {{- $secretName := $component.secretName | default "" }}
-      {{- if $.Values.defaults.autoDetectSecrets }}
-        {{- $defaultSecretName := printf "%s-%s-secrets" (include "app.fullname" $) $componentNameValue }}
-        {{- $secretExists := lookup "v1" "Secret" $.Release.Namespace $defaultSecretName }}
-        {{- if $secretExists }}
-          {{- $secretName = $defaultSecretName }}
-        {{- end }}
-      {{- end }}
+      {{- $secretName := $component.secretName | default (printf "%s-%s-secrets" (include "app.fullname" $) $componentNameValue) }}
       {{- if $component.initContainers }}
       initContainers:
         {{- range $container := $component.initContainers }}
@@ -61,11 +44,12 @@ spec:
             - name: APP_STAGE
               value: {{ $.Values.stage | quote }}
             {{- include "app.backendEnvVars" (dict "component" $component "root" $) | nindent 12 }}
-          {{- if $secretName }}
           envFrom:
             - secretRef:
                 name: {{ $secretName }}
-          {{- end }}
+                {{- if not $component.secretName }}
+                optional: true
+                {{- end }}
         {{- end }}
       {{- end }}
       containers:
@@ -116,11 +100,12 @@ spec:
             - name: VITE_POSTHOG_HOST
               value: "https://{{ $.Values.posthog.host }}"
             {{- end }}
-          {{- if $secretName }}
           envFrom:
             - secretRef:
                 name: {{ $secretName }}
-          {{- end }}
+                {{- if not $component.secretName }}
+                optional: true
+                {{- end }}
           resources:
             {{- if $component.resources }}
             {{- toYaml $component.resources | nindent 12 }}
