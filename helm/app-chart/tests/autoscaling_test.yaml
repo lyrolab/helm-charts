@@ -1,0 +1,56 @@
+suite: autoscaling
+templates:
+  - templates/autoscaling.yaml
+  - templates/deployment.yaml
+release:
+  name: demo
+set:
+  components.worker.enabled: true
+  components.worker.image.repository: ghcr.io/lyrolab/demo-worker
+  components.worker.service.targetPort: 3000
+tests:
+  - it: renders no HPA and a fixed replica count by default
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/autoscaling.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/deployment.yaml
+
+  - it: fills a partial component autoscaling block from defaults
+    set:
+      components.worker.autoscaling:
+        enabled: true
+        maxReplicas: 3
+    asserts:
+      - equal:
+          path: spec.minReplicas
+          value: 1
+        template: templates/autoscaling.yaml
+      - equal:
+          path: spec.maxReplicas
+          value: 3
+        template: templates/autoscaling.yaml
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 80
+        template: templates/autoscaling.yaml
+      - notExists:
+          path: spec.replicas
+        template: templates/deployment.yaml
+
+  - it: lets a component opt out of autoscaling enabled in defaults
+    set:
+      defaults.autoscaling.enabled: true
+      components.worker.autoscaling:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/autoscaling.yaml
+      - equal:
+          path: spec.replicas
+          value: 1
+        template: templates/deployment.yaml

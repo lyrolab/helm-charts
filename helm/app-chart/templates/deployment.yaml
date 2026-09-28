@@ -7,10 +7,9 @@ kind: Deployment
 metadata:
   name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
   labels:
-    {{- include "app.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $componentNameValue }}
+    {{- include "app.componentLabels" (dict "root" $ "component" $component "name" $componentNameValue) | nindent 4 }}
 spec:
-  {{- $autoscaling := $component.autoscaling | default $.Values.defaults.autoscaling }}
+  {{- $autoscaling := mergeOverwrite (deepCopy $.Values.defaults.autoscaling) ($component.autoscaling | default dict) }}
   {{- if not $autoscaling.enabled }}
   replicas: {{ $component.replicaCount | default 1 }}
   {{- end }}
@@ -33,7 +32,7 @@ spec:
         {{- range $container := $component.initContainers }}
         - name: {{ $container.name }}
           image: "{{ $component.image.repository }}:{{ $component.image.tag | default $.Values.defaults.image.tag }}"
-          command: ["sh", "-c", "{{ $container.command }}"]
+          command: ["sh", "-c", {{ $container.command | toJson }}]
           env:
             {{- if $component.env }}
             {{- range $key, $value := $component.env }}

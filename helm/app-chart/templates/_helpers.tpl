@@ -39,33 +39,24 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
+Labels for a component's resources; the version is the tag the component runs
+*/}}
+{{- define "app.componentLabels" -}}
+{{- $root := .root -}}
+helm.sh/chart: {{ include "app.chart" $root }}
+{{ include "app.selectorLabels" $root }}
+app.kubernetes.io/version: {{ .component.image.tag | default $root.Values.defaults.image.tag | quote }}
+app.kubernetes.io/managed-by: {{ $root.Release.Service }}
+app.kubernetes.io/component: {{ .name }}
+{{- end }}
+
+{{/*
 Selector labels
 */}}
 {{- define "app.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "app.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-
-{{/*
-Get component image tag with defaults
-*/}}
-{{- define "app.getImageTag" -}}
-{{- $component := . -}}
-{{- $tag := $component.image.tag | default $.Values.defaults.image.tag -}}
-{{- $tag -}}
-{{- end -}}
-
-{{/*
-Get component resources with defaults
-*/}}
-{{- define "app.getResources" -}}
-{{- $component := . -}}
-{{- if $component.resources -}}
-{{- toYaml $component.resources -}}
-{{- else -}}
-{{- toYaml $.Values.defaults.resources -}}
-{{- end -}}
-{{- end -}}
 
 {{/*
 Get service settings with defaults
@@ -104,15 +95,10 @@ Backend environment variables
 - name: POSTHOG_HOST
   value: "https://{{ $root.Values.posthog.host }}"
 {{- end }}
-{{- $otelEnabled := $root.Values.defaults.otel.enabled }}
-{{- $otelExporterUrl := $root.Values.defaults.otel.exporterUrl }}
-{{- if $component.otel }}
-  {{- $otelEnabled = $component.otel.enabled | default $root.Values.defaults.otel.enabled }}
-  {{- $otelExporterUrl = $component.otel.exporterUrl | default $root.Values.defaults.otel.exporterUrl }}
-{{- end }}
-{{- if $otelEnabled }}
+{{- $otel := mergeOverwrite (deepCopy $root.Values.defaults.otel) ($component.otel | default dict) }}
+{{- if $otel.enabled }}
 - name: OTEL_EXPORTER_URL
-  value: {{ $otelExporterUrl | quote }}
+  value: {{ $otel.exporterUrl | default $root.Values.defaults.otel.exporterUrl | quote }}
 {{- end }}
 {{- end -}}
 

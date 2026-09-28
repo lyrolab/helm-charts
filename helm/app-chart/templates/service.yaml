@@ -8,8 +8,7 @@ kind: Service
 metadata:
   name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
   labels:
-    {{- include "app.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $componentNameValue }}
+    {{- include "app.componentLabels" (dict "root" $ "component" $component "name" $componentNameValue) | nindent 4 }}
 spec:
   type: {{ $service.type }}
   ports:

@@ -1,0 +1,21 @@
+{{- range $componentName, $component := .Values.components }}
+{{- $componentNameValue := $component.name | default $componentName }}
+{{- $pdb := mergeOverwrite (deepCopy $.Values.defaults.podDisruptionBudget) ($component.podDisruptionBudget | default dict) }}
+{{- $autoscaling := mergeOverwrite (deepCopy $.Values.defaults.autoscaling) ($component.autoscaling | default dict) }}
+{{- $replicas := ternary $autoscaling.minReplicas ($component.replicaCount | default 1) $autoscaling.enabled }}
+{{- if and $component.enabled $pdb.enabled (gt (int $replicas) 1) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
+  labels:
+    {{- include "app.componentLabels" (dict "root" $ "component" $component "name" $componentNameValue) | nindent 4 }}
+spec:
+  maxUnavailable: {{ $pdb.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $componentNameValue }}
+{{- end }}
+{{- end }}

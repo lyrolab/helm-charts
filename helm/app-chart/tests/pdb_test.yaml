@@ -1,0 +1,60 @@
+suite: pod disruption budget
+templates:
+  - templates/pdb.yaml
+release:
+  name: demo
+set:
+  components.worker.enabled: true
+  components.worker.image.repository: ghcr.io/lyrolab/demo-worker
+  components.worker.service.targetPort: 3000
+tests:
+  - it: renders nothing by default
+    set:
+      components.worker.replicaCount: 3
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing for a single replica even when enabled
+    set:
+      defaults.podDisruptionBudget.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a budget for several fixed replicas
+    set:
+      defaults.podDisruptionBudget.enabled: true
+      components.worker.replicaCount: 2
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+      - equal:
+          path: spec.maxUnavailable
+          value: 1
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: app-chart
+            app.kubernetes.io/instance: demo
+            app.kubernetes.io/component: worker
+
+  - it: uses minReplicas when autoscaling
+    set:
+      components.worker.podDisruptionBudget.enabled: true
+      components.worker.autoscaling:
+        enabled: true
+        minReplicas: 2
+    asserts:
+      - isKind:
+          of: PodDisruptionBudget
+
+  - it: renders nothing when autoscaling starts from one replica
+    set:
+      components.worker.podDisruptionBudget.enabled: true
+      components.worker.replicaCount: 4
+      components.worker.autoscaling:
+        enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0

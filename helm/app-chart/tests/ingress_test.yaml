@@ -46,3 +46,36 @@ tests:
       - equal:
           path: spec.ingressClassName
           value: nginx
+
+  - it: does not rewrite a component that sets ingress annotations without a path
+    set:
+      components.frontend.ingress.annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-frontend
+    asserts:
+      - notExists:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/rewrite-target"]
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/proxy-body-size"]
+          value: 10m
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+
+  - it: does not rewrite a component whose path is explicitly /
+    set:
+      components.backend.ingress.path: /
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    asserts:
+      - notExists:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/rewrite-target"]
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
