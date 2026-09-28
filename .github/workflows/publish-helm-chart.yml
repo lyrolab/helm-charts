@@ -38,12 +38,24 @@ jobs:
         with:
           version: 'latest'
 
+      - name: Skip versions already published
+        id: guard
+        run: |
+          version=$(helm show chart helm/app-chart | awk '/^version:/ {print $2}')
+          git fetch origin gh-pages || true
+          if git cat-file -e "origin/gh-pages:app-chart-${version}.tgz" 2>/dev/null; then
+            echo "::notice::app-chart ${version} is already published; bump helm/app-chart/Chart.yaml to publish a new version."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Package Helm Chart
+        if: steps.guard.outputs.skip != 'true'
         run: |
           mkdir -p .packages
           helm package helm/app-chart -d .packages
 
       - name: Create or Update gh-pages branch
+        if: steps.guard.outputs.skip != 'true'
         run: |
           # Keep every previously published .tgz in the tree: `helm repo index`
           # rebuilds the index from the charts it finds on disk, so clearing the
