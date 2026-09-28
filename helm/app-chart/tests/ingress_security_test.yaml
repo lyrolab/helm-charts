@@ -1,0 +1,107 @@
+suite: ingress security headers, rate limiting and TLS
+templates:
+  - templates/ingress.yaml
+release:
+  name: demo
+set:
+  components.frontend.enabled: true
+  components.frontend.host: demo.lyrolab.fr
+  components.frontend.image.repository: ghcr.io/lyrolab/demo-frontend
+tests:
+  - it: sends the security headers by default
+    asserts:
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
+          value: |
+            more_set_headers "Permissions-Policy: camera=(), microphone=(), geolocation=()";
+            more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+            more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+            more_set_headers "X-Content-Type-Options: nosniff";
+            more_set_headers "X-Frame-Options: SAMEORIGIN";
+
+  - it: drops a header whose value is empty
+    set:
+      defaults.ingress.securityHeaders.hsts: ""
+    asserts:
+      - notMatchRegex:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
+          pattern: Strict-Transport-Security
+      - matchRegex:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
+          pattern: 'X-Frame-Options: SAMEORIGIN'
+
+  - it: lets a component override one header and keep the others
+    set:
+      components.frontend.ingress.securityHeaders.frameOptions: DENY
+    asserts:
+      - matchRegex:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
+          pattern: 'X-Frame-Options: DENY'
+      - matchRegex:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
+          pattern: 'X-Content-Type-Options: nosniff'
+
+  - it: lets a component turn the headers off
+    set:
+      components.frontend.ingress.securityHeaders.enabled: false
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: appends a component configuration-snippet after the headers
+    set:
+      components.frontend.ingress.annotations:
+        nginx.ingress.kubernetes.io/configuration-snippet: |
+          more_set_headers "Content-Security-Policy: default-src 'self'";
+        nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    asserts:
+      - matchRegex:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
+          pattern: 'X-Frame-Options: SAMEORIGIN";\nmore_set_headers "Content-Security-Policy: default-src ''self''";\n$'
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/proxy-body-size"]
+          value: 10m
+
+  - it: sets no rate limit by default
+    asserts:
+      - notExists:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/limit-rps"]
+      - notExists:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/limit-burst-multiplier"]
+
+  - it: maps rateLimit.rps to the ingress-nginx limit annotations
+    set:
+      components.frontend.ingress.rateLimit.rps: 20
+    asserts:
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/limit-rps"]
+          value: "20"
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/limit-burst-multiplier"]
+          value: "5"
+
+  - it: declares no TLS by default
+    asserts:
+      - notExists:
+          path: spec.tls
+
+  - it: declares TLS for the component host with the Lyro Lab certificate
+    set:
+      defaults.ingress.tls.enabled: true
+    asserts:
+      - equal:
+          path: spec.tls
+          value:
+            - hosts:
+                - demo.lyrolab.fr
+              secretName: lyrolab-fr-tls
+
+  - it: lets a component use its own certificate
+    set:
+      components.frontend.ingress.tls:
+        enabled: true
+        secretName: demo-tls
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: demo-tls

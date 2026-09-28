@@ -20,6 +20,35 @@
   {{- $path = $component.ingress.path }}
   {{- end }}
 {{- end }}
+{{- $headers := mergeOverwrite (deepCopy $.Values.defaults.ingress.securityHeaders) (dig "ingress" "securityHeaders" dict $component) }}
+{{- $rateLimit := mergeOverwrite (deepCopy $.Values.defaults.ingress.rateLimit) (dig "ingress" "rateLimit" dict $component) }}
+{{- $tls := mergeOverwrite (deepCopy $.Values.defaults.ingress.tls) (dig "ingress" "tls" dict $component) }}
+{{- $annotations := dict }}
+{{- if ne $path "/" }}
+  {{- $_ := set $annotations "nginx.ingress.kubernetes.io/rewrite-target" "/$2" }}
+{{- end }}
+{{- if $rateLimit.rps }}
+  {{- $_ := set $annotations "nginx.ingress.kubernetes.io/limit-rps" ($rateLimit.rps | toString) }}
+  {{- $_ := set $annotations "nginx.ingress.kubernetes.io/limit-burst-multiplier" ($rateLimit.burstMultiplier | toString) }}
+{{- end }}
+{{- $snippet := "" }}
+{{- if $headers.enabled }}
+  {{- range $header, $value := dict "Strict-Transport-Security" $headers.hsts "X-Content-Type-Options" $headers.contentTypeOptions "Referrer-Policy" $headers.referrerPolicy "X-Frame-Options" $headers.frameOptions "Permissions-Policy" $headers.permissionsPolicy }}
+    {{- if $value }}
+    {{- $snippet = printf "%smore_set_headers \"%s: %s\";\n" $snippet $header $value }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- range $key, $value := dig "ingress" "annotations" dict $component }}
+  {{- if eq $key "nginx.ingress.kubernetes.io/configuration-snippet" }}
+    {{- $snippet = printf "%s%s" $snippet $value }}
+  {{- else }}
+    {{- $_ := set $annotations $key $value }}
+  {{- end }}
+{{- end }}
+{{- if $snippet }}
+  {{- $_ := set $annotations "nginx.ingress.kubernetes.io/configuration-snippet" $snippet }}
+{{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -27,15 +56,10 @@ metadata:
   name: {{ $fullName }}-{{ $componentNameValue }}
   labels:
     {{- include "app.componentLabels" (dict "root" $ "component" $component "name" $componentNameValue) | nindent 4 }}
+  {{- with $annotations }}
   annotations:
-    {{- if ne $path "/" }}
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    {{- end }}
-    {{- if hasKey $component "ingress" }}
-    {{- with $component.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
-    {{- end }}
+  {{- end }}
 spec:
   {{- $ingressClassName := $.Values.defaults.ingress.className }}
   {{- if hasKey $component "ingress" }}
@@ -45,6 +69,12 @@ spec:
   {{- end }}
   {{- if $ingressClassName }}
   ingressClassName: {{ $ingressClassName }}
+  {{- end }}
+  {{- if $tls.enabled }}
+  tls:
+    - hosts:
+        - {{ $component.host | quote }}
+      secretName: {{ $tls.secretName }}
   {{- end }}
   rules:
     - host: {{ $component.host | quote }}

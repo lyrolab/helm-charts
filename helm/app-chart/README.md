@@ -79,6 +79,7 @@ serviceAccount:
 - For backend/frontend, URLs are set automatically for inter-component communication:
   - backend: `SERVER_URL`, `FRONTEND_URL` (if frontend enabled)
   - frontend: `NEXT_PUBLIC_BACKEND_URL` (if backend enabled)
+- With `keycloak.realm` set, the backend receives `KEYCLOAK_REALM`, `KEYCLOAK_URL` and `KEYCLOAK_CLIENT_ID`, and the frontend the `NEXT_PUBLIC_`/`VITE_` equivalents. `keycloak.url` (default `https://sso.lyrolab.fr`), `keycloak.clientId` (backend, default `app`) and `keycloak.frontendClientId` (frontend, default `app`) set the values.
 - `OTEL_EXPORTER_URL` is set when OpenTelemetry is enabled for the component. `components.<name>.otel` is merged over `defaults.otel`, so `otel.enabled: false` on a component turns it off; the chart ships it on for `backend` and off for `frontend`.
 
 ### 6. Resources
@@ -126,6 +127,22 @@ components:
 - Each component can override ingress settings.
 - For `backend`, path is `/api(/|$)(.*)` with rewrite; for others, `/`. The `/$2` rewrite and `ImplementationSpecific` path type apply only when the resolved path is not `/`.
 - Ingress class, annotations, and hosts are configurable.
+- `securityHeaders`, `rateLimit` and `tls` live under `defaults.ingress` and can be overridden per component under `components.<name>.ingress`; a component's block is merged over the defaults.
+
+**Security headers.** On by default. Each ingress gets a `configuration-snippet` of `more_set_headers` for `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`. Set a header's value to `""` to drop it, or `securityHeaders.enabled: false` to send none. The controller must allow snippet annotations (`allow-snippet-annotations: true`, and `annotations-risk-level: Critical` on ingress-nginx 1.12+). A component's own `nginx.ingress.kubernetes.io/configuration-snippet` annotation is appended after the headers. Content-Security-Policy is left to each app.
+
+```yaml
+components:
+  frontend:
+    ingress:
+      securityHeaders:
+        frameOptions: DENY
+        hsts: ""
+```
+
+**Rate limiting.** `rateLimit.rps` sets `nginx.ingress.kubernetes.io/limit-rps` per client IP, with `limit-burst-multiplier` from `rateLimit.burstMultiplier` (default `5`). Unset means unlimited.
+
+**TLS.** `tls.enabled: true` declares TLS for the component host with `tls.secretName` (default `lyrolab-fr-tls`), which must exist in the release namespace. Declaring TLS makes ingress-nginx redirect HTTP to HTTPS, so the upstream proxy must reach the origin over HTTPS.
 
 ---
 

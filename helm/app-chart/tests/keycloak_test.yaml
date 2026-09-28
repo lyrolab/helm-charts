@@ -1,0 +1,79 @@
+suite: keycloak
+templates:
+  - templates/deployment.yaml
+release:
+  name: demo
+set:
+  components.backend.enabled: true
+  components.backend.image.repository: ghcr.io/lyrolab/demo-backend
+  components.frontend.enabled: true
+  components.frontend.image.repository: ghcr.io/lyrolab/demo-frontend
+tests:
+  - it: renders no Keycloak env without a realm
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: KEYCLOAK_URL
+        documentSelector:
+          path: metadata.name
+          value: demo-app-chart-backend
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: VITE_KEYCLOAK_URL
+        documentSelector:
+          path: metadata.name
+          value: demo-app-chart-frontend
+
+  - it: defaults to the shared Lyro Lab realm server and app clients
+    set:
+      keycloak.realm: demo
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: KEYCLOAK_URL, value: https://sso.lyrolab.fr}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: KEYCLOAK_CLIENT_ID, value: app}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: KEYCLOAK_REALM, value: demo}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: VITE_KEYCLOAK_URL, value: https://sso.lyrolab.fr}
+        documentSelector: {path: metadata.name, value: demo-app-chart-frontend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NEXT_PUBLIC_KEYCLOAK_CLIENT_ID, value: app}
+        documentSelector: {path: metadata.name, value: demo-app-chart-frontend}
+
+  - it: takes the server and client IDs from values
+    set:
+      keycloak:
+        realm: demo
+        url: https://sso.example.com
+        clientId: demo-api
+        frontendClientId: demo-web
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: KEYCLOAK_URL, value: https://sso.example.com}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: KEYCLOAK_CLIENT_ID, value: demo-api}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: NEXT_PUBLIC_KEYCLOAK_URL, value: https://sso.example.com}
+        documentSelector: {path: metadata.name, value: demo-app-chart-frontend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: VITE_KEYCLOAK_CLIENT_ID, value: demo-web}
+        documentSelector: {path: metadata.name, value: demo-app-chart-frontend}
