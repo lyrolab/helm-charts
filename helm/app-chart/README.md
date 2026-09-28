@@ -70,6 +70,14 @@ serviceAccount:
 - Every component mounts `<release>-<component>-secrets` as `envFrom` with `optional: true`, so the pod starts whether or not that secret exists.
 - `secretName` per component overrides the name; an explicit `secretName` is mounted without `optional`, so a missing secret blocks the pod instead of starting it without its configuration.
 
+### Breaking changes in 0.5.0
+- Every component ingress sends security headers through a `configuration-snippet` (see Ingress). `X-Frame-Options: SAMEORIGIN` blocks cross-origin framing. Set `defaults.ingress.securityHeaders.enabled: false` to keep 0.4.0 behaviour.
+- `otel.enabled: false` is honoured, so `frontend` (off in the chart values) no longer receives `OTEL_EXPORTER_URL`. Set `components.frontend.otel.enabled: true` if it exports telemetry.
+- A component with ingress annotations but no `path` is served at `/` with `Prefix`, instead of being rewritten to `/$2`.
+- A component's `autoscaling` block is merged over `defaults.autoscaling` instead of replacing it.
+- `app.kubernetes.io/version` on component resources is the component's image tag, not `defaults.image.tag`. Selectors are unchanged.
+- Keycloak env values are unchanged by default; they now come from `keycloak.url`, `keycloak.clientId` and `keycloak.frontendClientId`.
+
 ### Breaking changes in 0.4.0
 - Pull secrets are no longer discovered from secrets ending in `-registry`. Declare them under `serviceAccount.imagePullSecrets` with `serviceAccount.create: true`.
 - `defaults.autoDetectSecrets` and `defaults.secretName` are removed. The convention secret is always referenced (optionally), and `components.<name>.secretName` remains the override.
