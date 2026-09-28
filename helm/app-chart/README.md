@@ -51,6 +51,7 @@ helm install my-app ./app-chart -f values.yaml
 ### 2. Naming & Labels
 - Resources are named `<release>-<component>` by default.
 - Standard Kubernetes labels and selectors are used for all resources.
+- `app.kubernetes.io/version` on a component's resources is the image tag that component runs (`image.tag`, falling back to `defaults.image.tag`).
 
 ### 3. Images & Pull Secrets
 - Each component defines its own image repo/tag.
@@ -78,6 +79,7 @@ serviceAccount:
 - For backend/frontend, URLs are set automatically for inter-component communication:
   - backend: `SERVER_URL`, `FRONTEND_URL` (if frontend enabled)
   - frontend: `NEXT_PUBLIC_BACKEND_URL` (if backend enabled)
+- `OTEL_EXPORTER_URL` is set when OpenTelemetry is enabled for the component. `components.<name>.otel` is merged over `defaults.otel`, so `otel.enabled: false` on a component turns it off; the chart ships it on for `backend` and off for `frontend`.
 
 ### 6. Resources
 - Set per component, or use global defaults via `defaults.resources`.
@@ -104,19 +106,25 @@ components:
 
 ### 8. Init Containers
 - Define `initContainers` as a list per component, each with `name` and `command`.
+- `command` runs as a single `sh -c` argument, so quotes and backslashes inside it reach the shell unchanged.
 
 ### 9. Autoscaling
 - If `autoscaling.enabled` is true, an HPA is created for the component.
 - Configure min/max replicas and CPU utilization threshold.
+- A component's `autoscaling` block is merged over `defaults.autoscaling`, so it only needs the keys it changes.
 
-### 10. Services
+### 10. Pod Disruption Budgets
+- Opt in with `podDisruptionBudget.enabled: true` in `defaults` or per component (merged over the defaults).
+- The budget allows `maxUnavailable` (default `1`) pods down at a time and is only rendered for components running more than one replica (`replicaCount`, or `autoscaling.minReplicas` when autoscaling). A budget on a single replica could only block node drains.
+
+### 11. Services
 - Each component gets a Service named `<release>-<component>`.
 - Service type/port can be set per component or via `defaults.service`.
 
-### 11. Ingress
+### 12. Ingress
 - Ingress is enabled by default (`defaults.ingress.enabled: true`).
 - Each component can override ingress settings.
-- For `backend`, path is `/api(/|$)(.*)` with rewrite; for others, `/`.
+- For `backend`, path is `/api(/|$)(.*)` with rewrite; for others, `/`. The `/$2` rewrite and `ImplementationSpecific` path type apply only when the resolved path is not `/`.
 - Ingress class, annotations, and hosts are configurable.
 
 ---
@@ -183,4 +191,5 @@ components:
 - `service.yaml`: Creates a Service for each enabled component.
 - `ingress.yaml`: Creates Ingress for each enabled component (with smart path/host conventions).
 - `autoscaling.yaml`: Creates HPA if enabled for a component.
+- `pdb.yaml`: Creates a PodDisruptionBudget if enabled for a component running more than one replica.
 - `_helpers.tpl`: Contains naming, label, and resource helpers.

@@ -1,0 +1,42 @@
+suite: deployment
+templates:
+  - templates/deployment.yaml
+release:
+  name: demo
+set:
+  defaults.image.tag: sha-default
+  components.backend.enabled: true
+  components.backend.image.repository: ghcr.io/lyrolab/demo-backend
+tests:
+  - it: passes the init container command to sh as a single argument
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].command
+          value: ["sh", "-c", "npm run db:migrate"]
+
+  - it: keeps quotes and backslashes in the init container command intact
+    set:
+      components.backend.initContainers:
+        - name: seed
+          command: echo "it's \"seeded\"" && printf 'a\\b'
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].command
+          value: ["sh", "-c", "echo \"it's \\\"seeded\\\"\" && printf 'a\\\\b'"]
+
+  - it: labels the component with the tag it runs
+    set:
+      components.backend.image.tag: sha-backend
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/version"]
+          value: sha-backend
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/lyrolab/demo-backend:sha-backend
+
+  - it: falls back to the default tag in the version label
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/version"]
+          value: sha-default

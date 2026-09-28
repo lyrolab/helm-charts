@@ -1,6 +1,6 @@
 {{- range $componentName, $component := .Values.components }}
 {{- $componentNameValue := $component.name | default $componentName }}
-{{- $autoscaling := $component.autoscaling | default $.Values.defaults.autoscaling }}
+{{- $autoscaling := mergeOverwrite (deepCopy $.Values.defaults.autoscaling) ($component.autoscaling | default dict) }}
 {{- if and $component.enabled $autoscaling.enabled }}
 ---
 apiVersion: autoscaling/v2
@@ -8,8 +8,7 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "app.fullname" $ }}-{{ $componentNameValue }}
   labels:
-    {{- include "app.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $componentNameValue }}
+    {{- include "app.componentLabels" (dict "root" $ "component" $component "name" $componentNameValue) | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

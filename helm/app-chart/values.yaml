@@ -48,6 +48,12 @@ defaults:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
+  # Rendered only for components running more than one replica (replicaCount,
+  # or minReplicas when autoscaling): a budget on a single replica can only
+  # block node drains.
+  podDisruptionBudget:
+    enabled: false
+    maxUnavailable: 1
   otel:
     enabled: true
     exporterUrl: "http://otelcol-collector.observability.svc.cluster.local:4317"

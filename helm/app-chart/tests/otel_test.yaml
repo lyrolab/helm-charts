@@ -1,0 +1,69 @@
+suite: opentelemetry
+templates:
+  - templates/deployment.yaml
+release:
+  name: demo
+set:
+  components.backend.enabled: true
+  components.backend.image.repository: ghcr.io/lyrolab/demo-backend
+  components.frontend.enabled: true
+  components.frontend.image.repository: ghcr.io/lyrolab/demo-frontend
+tests:
+  - it: exports telemetry from the backend and not from the frontend by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: OTEL_EXPORTER_URL
+            value: http://otelcol-collector.observability.svc.cluster.local:4317
+        documentSelector:
+          path: metadata.name
+          value: demo-app-chart-backend
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_URL
+        documentSelector:
+          path: metadata.name
+          value: demo-app-chart-frontend
+
+  - it: honours otel.enabled false on a component
+    set:
+      components.backend.otel.enabled: false
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_URL
+
+  - it: honours otel.enabled false in defaults for components without an otel block
+    set:
+      defaults.otel.enabled: false
+      components.backend.otel: null
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_URL
+
+  - it: uses a component exporterUrl over the default
+    set:
+      components.backend.otel.exporterUrl: http://collector:4317
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: OTEL_EXPORTER_URL
+            value: http://collector:4317
