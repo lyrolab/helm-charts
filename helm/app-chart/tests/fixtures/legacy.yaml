@@ -1,0 +1,37 @@
+stage: production
+serviceAccount:
+  create: true
+  imagePullSecrets: [fixture-registry]
+keycloak:
+  realm: fixture
+featureFlags:
+  enabled: true
+defaults:
+  image:
+    tag: fixture-sha
+  ingress:
+    tls:
+      enabled: true
+components:
+  backend:
+    enabled: true
+    host: chat.example.invalid
+    image:
+      repository: example.invalid/backend
+    secretName: fixture-backend
+    env:
+      NODE_ENV: production
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+  frontend:
+    enabled: true
+    host: chat.example.invalid
+    image:
+      repository: example.invalid/frontend
+    env:
+      NODE_ENV: production

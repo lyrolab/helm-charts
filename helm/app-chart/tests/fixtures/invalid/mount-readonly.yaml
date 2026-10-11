@@ -1,0 +1,6 @@
+components:
+  worker:
+    volumeMounts:
+    - name: tmp
+      mountPath: /uploads
+      readOnly: 'yes'

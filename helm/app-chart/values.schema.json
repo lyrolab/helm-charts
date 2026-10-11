@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "resources": {
+          "$ref": "#/definitions/resources"
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "$ref": "#/definitions/argv"
+          },
+          "args": {
+            "$ref": "#/definitions/argv"
+          },
+          "volumes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "emptyDir": {
+                  "type": "object",
+                  "properties": {
+                    "medium": {
+                      "type": "string"
+                    },
+                    "sizeLimit": {
+                      "$ref": "#/definitions/quantity"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "volumeMounts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "mountPath"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mountPath": {
+                  "type": "string",
+                  "pattern": "^/"
+                },
+                "readOnly": {
+                  "type": "boolean"
+                },
+                "subPath": {
+                  "type": "string"
+                },
+                "subPathExpr": {
+                  "type": "string"
+                },
+                "mountPropagation": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "resources": {
+            "$ref": "#/definitions/resources"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "argv": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "quantity": {
+      "type": [
+        "string",
+        "number"
+      ],
+      "minLength": 1
+    },
+    "resources": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "requests": {
+          "$ref": "#/definitions/resourceQuantities"
+        },
+        "limits": {
+          "$ref": "#/definitions/resourceQuantities"
+        }
+      }
+    },
+    "resourceQuantities": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/definitions/quantity"
+      }
+    }
+  }
+}

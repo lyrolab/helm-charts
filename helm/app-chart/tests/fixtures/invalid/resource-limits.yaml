@@ -1,0 +1,4 @@
+components:
+  worker:
+    resources:
+      limits: 384Mi

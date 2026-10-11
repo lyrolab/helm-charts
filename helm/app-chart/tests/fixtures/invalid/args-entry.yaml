@@ -1,0 +1,4 @@
+components:
+  worker:
+    args:
+    - false

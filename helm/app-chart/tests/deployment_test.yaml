@@ -1,6 +1,7 @@
 suite: deployment
 templates:
   - templates/deployment.yaml
+  - templates/service.yaml
 release:
   name: demo
 set:
@@ -9,6 +10,7 @@ set:
   components.backend.image.repository: ghcr.io/lyrolab/demo-backend
 tests:
   - it: passes the init container command to sh as a single argument
+    template: templates/deployment.yaml
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].command
@@ -19,6 +21,7 @@ tests:
       components.backend.initContainers:
         - name: seed
           command: echo "it's \"seeded\"" && printf 'a\\b'
+    template: templates/deployment.yaml
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].command
@@ -27,6 +30,7 @@ tests:
   - it: labels the component with the tag it runs
     set:
       components.backend.image.tag: sha-backend
+    template: templates/deployment.yaml
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/version"]
@@ -36,7 +40,290 @@ tests:
           value: ghcr.io/lyrolab/demo-backend:sha-backend
 
   - it: falls back to the default tag in the version label
+    template: templates/deployment.yaml
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/version"]
           value: sha-default
+
+  - it: keeps backend runtime bounds and configuration separate
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    values:
+    - fixtures/bounded-runtime.yaml
+    asserts:
+    - equal:
+        path: spec.template.spec.volumes
+        value:
+        - name: upload-tmp
+          emptyDir:
+            sizeLimit: 256Mi
+    - equal:
+        path: spec.template.spec.containers[0].volumeMounts
+        value:
+        - name: upload-tmp
+          mountPath: /var/lib/lyrochat/uploads
+          readOnly: false
+    - equal:
+        path: spec.template.spec.containers[0].resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+            ephemeral-storage: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+            ephemeral-storage: 384Mi
+    - equal:
+        path: spec.template.spec.initContainers[0].command
+        value:
+        - sh
+        - -c
+        - npm run db:migrate
+    - notExists:
+        path: spec.template.spec.initContainers[0].volumeMounts
+    - notExists:
+        path: spec.template.spec.initContainers[0].resources
+    - notExists:
+        path: spec.template.spec.containers[0].command
+    - notExists:
+        path: spec.template.spec.containers[0].args
+  - it: keeps worker runtime bounds and configuration separate
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-worker
+    values:
+    - fixtures/bounded-runtime.yaml
+    asserts:
+    - equal:
+        path: spec.template.spec.volumes
+        value:
+        - name: decode-tmp
+          emptyDir:
+            sizeLimit: 64Mi
+    - equal:
+        path: spec.template.spec.containers[0].volumeMounts
+        value:
+        - name: decode-tmp
+          mountPath: /var/lib/lyrochat/decode
+    - equal:
+        path: spec.template.spec.containers[0].resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+            ephemeral-storage: 64Mi
+          limits:
+            cpu: 1000m
+            memory: 768Mi
+            ephemeral-storage: 128Mi
+    - equal:
+        path: spec.template.spec.containers[0].command
+        value:
+        - node
+    - equal:
+        path: spec.template.spec.containers[0].args
+        value: &id007
+        - dist/fixture-worker.js
+        - --label=spaces "quotes" \\ $HOME $(echo fixture) {{ .Values.stage }}
+    - equal:
+        path: spec.template.spec.containers[0].ports
+        value:
+        - name: http
+          containerPort: 3001
+          protocol: TCP
+    - notExists:
+        path: spec.template.spec.initContainers
+    - equal:
+        path: spec.template.spec.containers[0].startupProbe.httpGet
+        value:
+          path: /healthz
+          port: http
+    - equal:
+        path: spec.template.spec.containers[0].livenessProbe.httpGet
+        value:
+          path: /healthz
+          port: http
+    - equal:
+        path: spec.template.spec.containers[0].readinessProbe.httpGet
+        value:
+          path: /healthz
+          port: http
+  - it: leaves the frontend entrypoint mounts and resources unchanged
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-frontend
+    values:
+    - fixtures/bounded-runtime.yaml
+    asserts:
+    - &id001
+      notExists:
+        path: spec.template.spec.containers[0].command
+    - &id002
+      notExists:
+        path: spec.template.spec.containers[0].args
+    - &id003
+      notExists:
+        path: spec.template.spec.containers[0].volumeMounts
+    - &id004
+      notExists:
+        path: spec.template.spec.volumes
+    - equal:
+        path: spec.template.spec.containers[0].resources
+        value:
+          limits:
+            cpu: 1000m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+  - it: omits null runtime lists
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    set:
+      components.backend.command: null
+      components.backend.args: null
+      components.backend.volumeMounts: null
+      components.backend.volumes: null
+    asserts: &id006
+    - *id001
+    - *id002
+    - *id003
+    - *id004
+  - it: omits empty runtime lists
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    set:
+      components.backend.command: &id005 []
+      components.backend.args: *id005
+      components.backend.volumeMounts: *id005
+      components.backend.volumes: *id005
+    asserts: *id006
+  - it: omits absent runtime lists
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    asserts: *id006
+  - it: allows command without args
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-worker
+    values:
+    - fixtures/bounded-runtime.yaml
+    set:
+      components.worker.args: []
+    asserts:
+    - equal:
+        path: spec.template.spec.containers[0].command
+        value:
+        - node
+    - notExists:
+        path: spec.template.spec.containers[0].args
+  - it: allows args without command
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-worker
+    values:
+    - fixtures/bounded-runtime.yaml
+    set:
+      components.worker.command: null
+    asserts:
+    - notExists:
+        path: spec.template.spec.containers[0].command
+    - equal:
+        path: spec.template.spec.containers[0].args
+        value: *id007
+  - it: uses the complete default resource block including ephemeral storage
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-frontend
+    values:
+    - fixtures/bounded-runtime.yaml
+    set:
+      defaults.resources: &id008
+        requests:
+          cpu: 50m
+          memory: 128Mi
+          ephemeral-storage: 32Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+          ephemeral-storage: 64Mi
+    asserts:
+    - equal:
+        path: spec.template.spec.containers[0].resources
+        value: *id008
+  - it: replaces default resources without inheriting ephemeral storage
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-worker
+    set:
+      components.worker.enabled: true
+      components.worker.image.repository: example.invalid/backend
+      components.worker.service.targetPort: 3001
+      components.worker.resources:
+        limits:
+          memory: 768Mi
+      defaults.resources: *id008
+    asserts:
+    - equal:
+        path: spec.template.spec.containers[0].resources
+        value:
+          limits:
+            memory: 768Mi
+  - it: preserves other Kubernetes volume sources and mount fields
+    template: templates/deployment.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-backend
+    set:
+      components.backend.volumes: &id009
+      - name: config
+        secret:
+          secretName: fixture-config
+      - name: scratch
+        emptyDir: {}
+      components.backend.volumeMounts: &id010
+      - name: config
+        mountPath: /config
+        readOnly: true
+        subPath: config.json
+    asserts:
+    - equal:
+        path: spec.template.spec.volumes
+        value: *id009
+    - equal:
+        path: spec.template.spec.containers[0].volumeMounts
+        value: *id010
+  - it: keeps the internal worker Service on its explicit health port
+    template: templates/service.yaml
+    documentSelector:
+      path: metadata.name
+      value: demo-app-chart-worker
+    values:
+    - fixtures/bounded-runtime.yaml
+    asserts:
+    - equal:
+        path: spec.ports
+        value:
+        - name: http
+          port: 80
+          targetPort: 3001
+          protocol: TCP
+    - equal:
+        path: spec.selector["app.kubernetes.io/component"]
+        value: worker

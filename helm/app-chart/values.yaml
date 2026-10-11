@@ -11,6 +11,7 @@ defaults:
   # Requests size the node pool; limits only cap burst. Requests stay small so
   # scheduling cost is unchanged, while the CPU limit is wide enough that a
   # container can burn through boot instead of being throttled past its probes.
+  # Resource maps also accept ephemeral-storage; a component override replaces this block.
   resources:
     limits:
       cpu: 1000m
@@ -76,6 +77,8 @@ defaults:
     enabled: true
     exporterUrl: "http://otelcol-collector.observability.svc.cluster.local:4317"
 
+# Per component: command/args are independent argv lists; volumes belong to the pod
+# and volumeMounts to its main container. Omitted, null or empty lists keep image defaults.
 components:
   backend:
     enabled: false

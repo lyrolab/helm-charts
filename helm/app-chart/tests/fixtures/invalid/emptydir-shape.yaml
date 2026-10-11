@@ -1,0 +1,5 @@
+components:
+  worker:
+    volumes:
+    - name: tmp
+      emptyDir: 256Mi
