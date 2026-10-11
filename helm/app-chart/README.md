@@ -319,3 +319,7 @@ Render without publishing or applying:
 helm lint --strict helm/app-chart -f helm/app-chart/tests/fixtures/bounded-runtime.yaml
 helm template demo helm/app-chart -f helm/app-chart/tests/fixtures/bounded-runtime.yaml
 ```
+
+## Publication
+
+Complete the separately approved operational release checklist, then explicitly run **Publish Helm Chart** with `workflow_dispatch` from `main`. Other selected refs skip the publish job. Ordinary pushes and merges do not start publication. Selecting chart `0.7.0` or merging this PR does not authorize dispatch.

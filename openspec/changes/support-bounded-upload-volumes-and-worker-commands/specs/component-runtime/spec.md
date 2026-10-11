@@ -82,3 +82,22 @@ The change SHALL select an unreserved publishable chart version, document the ne
 
 - **WHEN** implementation finishes
 - **THEN** T10 receives the selected version and fixture/value references, with publication explicitly recorded as a separate pending operational action
+
+### Requirement: Publication requires explicit dispatch from main
+
+The publication workflow SHALL use `workflow_dispatch` as its only event and SHALL guard the entire publish job with `github.ref == 'refs/heads/main'`. Existing release steps, token wiring, version guard and retention of earlier packages SHALL remain unchanged. Operators MUST complete the separately approved operational checklist before dispatch; version selection and repository merge MUST NOT authorize dispatch.
+
+#### Scenario: Repository merge does not publish
+
+- **WHEN** a commit is pushed or merged into main
+- **THEN** the publication workflow is not triggered
+
+#### Scenario: Dispatch selects another ref
+
+- **WHEN** a manual dispatch selects a branch or tag other than `refs/heads/main`
+- **THEN** the entire publish job is skipped before token creation, packaging or publication
+
+#### Scenario: Approved operator release
+
+- **WHEN** the separately approved operational checklist is complete and an operator explicitly dispatches from main
+- **THEN** the existing release steps remain eligible to run with the unchanged version guard and package retention

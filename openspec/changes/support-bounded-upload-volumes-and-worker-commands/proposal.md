@@ -30,4 +30,4 @@ Sensitive surfaces: preserve auth-related secret references and HTTP probe bound
 
 Out of scope: worker application code and its production entrypoint, upload admission/cleanup, Terraform, Spaces credentials, frontend changes, chart packaging/publication, cluster apply, and feature exposure. T10 consumes this chart contract and T02 supplies the actual worker command.
 
-The current publish workflow automatically publishes on a `main` push. Founding Engineer must resolve that conflict with the roadmap's separate publication gate before merge; this proposal does not change that workflow or authorize publication.
+Founding Engineer authorized a narrow publication-workflow repair on 2026-10-11 after Reviewer flagged automatic publication on merge. Replace the main-push trigger with `workflow_dispatch` only and guard the publish job with `github.ref == 'refs/heads/main'`. Preserve all release steps, token wiring, version checks and earlier packages. Document the separate operational approval required before dispatch; this repair does not authorize packaging or publication.

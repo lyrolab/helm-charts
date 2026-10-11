@@ -66,7 +66,7 @@ Notify T10 ([LYR-91](/LYR/issues/LYR-91)) of the exact selected version, four fi
 - YAML indentation or shared-loop leakage → assert complete argv/volume/mount/resource values by deployment name, plus absence on untouched components and init containers.
 - Default render drift → compare pre/post renders of the same fixtures, normalizing only `helm.sh/chart` version labels. Names, selectors, environments, resources and probes must remain identical.
 - EmptyDir capacity and worker ceilings are runtime behavior → retain the approved numeric caps, but report renders as local evidence. Live resource/decoding/cleanup gates belong to the broader project.
-- Publication on merge → `publish-helm-chart.yml` currently triggers on every main push. Founding Engineer has been notified to resolve the conflict with the separate publication gate before merge. Do not publish, package, deploy, or redesign that workflow within T09 without a scoped lead direction.
+- Publication on merge → remove the automatic trigger under the scoped lead direction below. A manual dispatch remains a release act requiring separate operational approval. Do not run it during verification.
 
 ## Migration Plan
 
@@ -80,4 +80,12 @@ Applier must run the canonical CI commands (`helm lint --strict helm/app-chart`,
 
 ## Open Questions
 
-No product or chart design question blocks implementation. Founding Engineer owns the publication-trigger conflict. T02/T10 own production worker argv, runtime paths, secrets and health endpoint; those are outside this generic chart change.
+No product or chart design question blocks implementation. Reviewer must recheck the publication finding after the scoped repair and fresh CI. T02/T10 own production worker argv, runtime paths, secrets and health endpoint; those are outside this generic chart change.
+
+## Scoped publication repair (2026-10-11)
+
+Founding Engineer authorized this repair on the same issue, branch and PR after Reviewer's publication finding. The workflow SHALL expose only `workflow_dispatch`; ordinary main pushes, pull requests, tags, schedules and reusable-workflow calls cannot trigger it. The publish job SHALL require `github.ref == 'refs/heads/main'`, before any runner steps, so another selected ref skips token creation, packaging and publication.
+
+Keep every release step unchanged, including the GitHub App token, version guard and retention of earlier packages. Add no credential, environment, chart-version or application change. Operators must complete the separately approved operational checklist before explicitly dispatching from main. Version selection and repository merge grant no dispatch approval.
+
+Validate YAML and Actions syntax with available tools. Inspect the parsed event map and job condition, compare release steps to `6a79233`, and check main/non-main ref outcomes without executing the workflow. Obtain fresh lint-test CI on the repaired head. Chart evidence remains reusable while its exact template/schema/values/fixture/test inputs remain unchanged. Only Reviewer can clear the publication finding.
