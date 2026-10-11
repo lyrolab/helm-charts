@@ -127,7 +127,7 @@ tests:
         - node
     - equal:
         path: spec.template.spec.containers[0].args
-        value: &id007
+        value: &workerArgs
         - dist/fixture-worker.js
         - --label=spaces "quotes" \\ $HOME $(echo fixture) {{ .Values.stage }}
     - equal:
@@ -161,16 +161,16 @@ tests:
     values:
     - fixtures/bounded-runtime.yaml
     asserts:
-    - &id001
+    - &noCommand
       notExists:
         path: spec.template.spec.containers[0].command
-    - &id002
+    - &noArgs
       notExists:
         path: spec.template.spec.containers[0].args
-    - &id003
+    - &noVolumeMounts
       notExists:
         path: spec.template.spec.containers[0].volumeMounts
-    - &id004
+    - &noVolumes
       notExists:
         path: spec.template.spec.volumes
     - equal:
@@ -192,28 +192,28 @@ tests:
       components.backend.args: null
       components.backend.volumeMounts: null
       components.backend.volumes: null
-    asserts: &id006
-    - *id001
-    - *id002
-    - *id003
-    - *id004
+    asserts: &noRuntimeLists
+    - *noCommand
+    - *noArgs
+    - *noVolumeMounts
+    - *noVolumes
   - it: omits empty runtime lists
     template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: demo-app-chart-backend
     set:
-      components.backend.command: &id005 []
-      components.backend.args: *id005
-      components.backend.volumeMounts: *id005
-      components.backend.volumes: *id005
-    asserts: *id006
+      components.backend.command: []
+      components.backend.args: []
+      components.backend.volumeMounts: []
+      components.backend.volumes: []
+    asserts: *noRuntimeLists
   - it: omits absent runtime lists
     template: templates/deployment.yaml
     documentSelector:
       path: metadata.name
       value: demo-app-chart-backend
-    asserts: *id006
+    asserts: *noRuntimeLists
   - it: allows command without args
     template: templates/deployment.yaml
     documentSelector:
@@ -244,7 +244,7 @@ tests:
         path: spec.template.spec.containers[0].command
     - equal:
         path: spec.template.spec.containers[0].args
-        value: *id007
+        value: *workerArgs
   - it: uses the complete default resource block including ephemeral storage
     template: templates/deployment.yaml
     documentSelector:
@@ -253,7 +253,7 @@ tests:
     values:
     - fixtures/bounded-runtime.yaml
     set:
-      defaults.resources: &id008
+      defaults.resources: &defaultResources
         requests:
           cpu: 50m
           memory: 128Mi
@@ -265,7 +265,7 @@ tests:
     asserts:
     - equal:
         path: spec.template.spec.containers[0].resources
-        value: *id008
+        value: *defaultResources
   - it: replaces default resources without inheriting ephemeral storage
     template: templates/deployment.yaml
     documentSelector:
@@ -278,7 +278,7 @@ tests:
       components.worker.resources:
         limits:
           memory: 768Mi
-      defaults.resources: *id008
+      defaults.resources: *defaultResources
     asserts:
     - equal:
         path: spec.template.spec.containers[0].resources
@@ -291,13 +291,13 @@ tests:
       path: metadata.name
       value: demo-app-chart-backend
     set:
-      components.backend.volumes: &id009
+      components.backend.volumes: &podVolumes
       - name: config
         secret:
           secretName: fixture-config
       - name: scratch
         emptyDir: {}
-      components.backend.volumeMounts: &id010
+      components.backend.volumeMounts: &containerMounts
       - name: config
         mountPath: /config
         readOnly: true
@@ -305,10 +305,10 @@ tests:
     asserts:
     - equal:
         path: spec.template.spec.volumes
-        value: *id009
+        value: *podVolumes
     - equal:
         path: spec.template.spec.containers[0].volumeMounts
-        value: *id010
+        value: *containerMounts
   - it: keeps the internal worker Service on its explicit health port
     template: templates/service.yaml
     documentSelector:
