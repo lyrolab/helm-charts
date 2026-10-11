@@ -95,6 +95,12 @@ Backend environment variables
 - name: POSTHOG_HOST
   value: "https://{{ $root.Values.posthog.host }}"
 {{- end }}
+{{- if and (eq $component.name "backend") ($root.Values.featureFlags.enabled) }}
+- name: FLIPT_URL
+  value: {{ $root.Values.featureFlags.url | quote }}
+- name: FLIPT_ENVIRONMENT
+  value: {{ $root.Values.featureFlags.environment | default (printf "%s-%s" (include "app.fullname" $root) $root.Values.stage) | quote }}
+{{- end }}
 {{- $otel := mergeOverwrite (deepCopy $root.Values.defaults.otel) ($component.otel | default dict) }}
 {{- if $otel.enabled }}
 - name: OTEL_EXPORTER_URL

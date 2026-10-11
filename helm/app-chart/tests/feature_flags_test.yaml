@@ -1,0 +1,65 @@
+suite: feature flags
+templates:
+  - templates/deployment.yaml
+release:
+  name: demo
+set:
+  stage: production
+  components.backend.enabled: true
+  components.backend.image.repository: ghcr.io/lyrolab/demo-backend
+  components.frontend.enabled: true
+  components.frontend.image.repository: ghcr.io/lyrolab/demo-frontend
+tests:
+  - it: renders no Flipt env when disabled
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: FLIPT_URL
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+
+  - it: points the backend at the company Flipt and the <fullname>-<stage> environment
+    set:
+      featureFlags.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: FLIPT_URL, value: http://flipt.lyrolab-flipt.svc.cluster.local:8080}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: FLIPT_ENVIRONMENT, value: demo-app-chart-production}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: FLIPT_URL
+        documentSelector: {path: metadata.name, value: demo-app-chart-frontend}
+
+  - it: uses nameOverride in the default environment, like the namespaces do
+    set:
+      nameOverride: lyrochat
+      featureFlags.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: FLIPT_ENVIRONMENT, value: demo-lyrochat-production}
+        documentSelector: {path: metadata.name, value: demo-lyrochat-backend}
+
+  - it: takes the URL and environment from values
+    set:
+      featureFlags:
+        enabled: true
+        url: http://flipt.example.svc:8080
+        environment: demo-staging
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: FLIPT_URL, value: http://flipt.example.svc:8080}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: FLIPT_ENVIRONMENT, value: demo-staging}
+        documentSelector: {path: metadata.name, value: demo-app-chart-backend}
