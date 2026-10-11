@@ -79,3 +79,22 @@ tests:
       - equal:
           path: spec.rules[0].http.paths[0].pathType
           value: Prefix
+
+  - it: omits worker ingress while retaining backend and frontend routes
+    values:
+      - fixtures/bounded-runtime.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /api(/|$)(.*)
+        documentSelector:
+          path: metadata.name
+          value: demo-app-chart-backend
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+        documentSelector:
+          path: metadata.name
+          value: demo-app-chart-frontend

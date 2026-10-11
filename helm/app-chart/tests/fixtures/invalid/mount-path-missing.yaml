@@ -1,0 +1,4 @@
+components:
+  worker:
+    volumeMounts:
+    - name: tmp

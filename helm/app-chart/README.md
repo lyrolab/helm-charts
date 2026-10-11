@@ -70,6 +70,10 @@ serviceAccount:
 - Every component mounts `<release>-<component>-secrets` as `envFrom` with `optional: true`, so the pod starts whether or not that secret exists.
 - `secretName` per component overrides the name; an explicit `secretName` is mounted without `optional`, so a missing secret blocks the pod instead of starting it without its configuration.
 
+### New in 0.7.0
+- Optional per-component `command`, `args`, `volumes` and `volumeMounts` (see Component runtime).
+- Values schema checks runtime field shapes and resource quantities, including `ephemeral-storage`.
+
 ### New in 0.6.0
 - `featureFlags` block: `FLIPT_URL` and `FLIPT_ENVIRONMENT` on the backend (see Environment Variables).
 
@@ -98,6 +102,21 @@ serviceAccount:
 - Set per component, or use global defaults via `defaults.resources`.
 - A component's `resources` block replaces the default block outright — it is not merged — so set both `limits` and `requests` when you override.
 - Defaults deliberately keep `requests` low and `limits` wide. Requests are what the scheduler reserves, and therefore what drives node-pool cost; limits only cap burst. A container that does real work at startup (framework bootstrap, migrations, telemetry SDK init) needs far more CPU for its first minute than it will ever use again, and a `requests == limits` budget denies it that burst.
+
+- Requests and limits accept `ephemeral-storage` alongside CPU and memory. No new storage default is set. Missing, null or empty component resources use the complete default resource block.
+
+### Component runtime
+
+| Component value | Kubernetes field | Shape |
+| --- | --- | --- |
+| `command` | Main container `command` | String list |
+| `args` | Main container `args` | String list |
+| `volumes` | Pod `volumes` | Kubernetes Volume list |
+| `volumeMounts` | Main container `volumeMounts` | Kubernetes VolumeMount list |
+
+`command` and `args` work independently and pass argv unchanged. The chart adds no shell wrapper and does not evaluate templates or shell expressions. Use an explicit shell command if you need one. Missing, null or empty lists emit no keys, keeping image entrypoint defaults. Volumes and mounts belong only to their component; migration init containers receive no new mounts or resource limits.
+
+The schema validates list types, string argv, volume names, absolute mount paths, `emptyDir` shape and resource maps. Other Kubernetes volume sources and mount fields remain usable. Kubernetes validates quantity semantics, duplicate names and volume references.
 
 ### 7. Probes
 - Enable per component with `probes.enabled: true` (on by default for `backend`).
@@ -222,3 +241,85 @@ components:
 - `autoscaling.yaml`: Creates HPA if enabled for a component.
 - `pdb.yaml`: Creates a PodDisruptionBudget if enabled for a component running more than one replica.
 - `_helpers.tpl`: Contains naming, label, and resource helpers.
+
+## Example: Bounded upload staging and a separate worker
+
+Chart `0.7.0` supports this contract. Version selection does not mean it has been published; publication and deployment follow the separate operational checklist.
+
+This complete render fixture is also in `tests/fixtures/bounded-runtime.yaml`. Worker argv, paths and health port are illustrative; T02 supplies the production entrypoint and T10 configures it. The worker keeps an internal Service and HTTP probes while its ingress is disabled.
+
+```yaml
+stage: fixture
+components:
+  backend:
+    enabled: true
+    host: chat.example.invalid
+    image:
+      repository: example.invalid/backend
+    volumes:
+      - name: upload-tmp
+        emptyDir:
+          sizeLimit: 256Mi
+    volumeMounts:
+      - name: upload-tmp
+        mountPath: /var/lib/lyrochat/uploads
+        readOnly: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+        ephemeral-storage: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+        ephemeral-storage: 384Mi
+  worker:
+    enabled: true
+    image:
+      repository: example.invalid/backend
+    command: [node]
+    args: [dist/fixture-worker.js, '--label=spaces "quotes" \\ $HOME $(echo fixture) {{ .Values.stage }}']
+    service:
+      targetPort: 3001
+    ingress:
+      enabled: false
+    probes:
+      enabled: true
+      path: /healthz
+    volumes:
+      - name: decode-tmp
+        emptyDir:
+          sizeLimit: 64Mi
+    volumeMounts:
+      - name: decode-tmp
+        mountPath: /var/lib/lyrochat/decode
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+        ephemeral-storage: 64Mi
+      limits:
+        cpu: 1000m
+        memory: 768Mi
+        ephemeral-storage: 128Mi
+  frontend:
+    enabled: true
+    host: chat.example.invalid
+    image:
+      repository: example.invalid/frontend
+```
+
+The API uses a disk-backed `emptyDir` capped at `256Mi` and an ephemeral-storage limit of `384Mi`. The worker has its own `64Mi` temporary volume and `768Mi` memory ceiling. Omitting `medium` avoids tmpfs memory charges. These volumes are pod-local and are not shared between API and worker pods.
+
+Application code owns private directories/files, upload admission, deadlines and cleanup. Kubernetes size limits alone do not prove privacy, secure erasure or an upload-time hard byte cap. Files disappear when the pod is removed; container restarts can leave files behind.
+
+Render without publishing or applying:
+
+```sh
+helm lint --strict helm/app-chart -f helm/app-chart/tests/fixtures/bounded-runtime.yaml
+helm template demo helm/app-chart -f helm/app-chart/tests/fixtures/bounded-runtime.yaml
+```
+
+## Publication
+
+Complete the separately approved operational release checklist, then explicitly run **Publish Helm Chart** with `workflow_dispatch` from `main`. Other selected refs skip the publish job. Ordinary pushes and merges do not start publication. Selecting chart `0.7.0` or merging this PR does not authorize dispatch.

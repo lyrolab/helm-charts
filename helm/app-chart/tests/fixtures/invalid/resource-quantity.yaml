@@ -1,0 +1,5 @@
+components:
+  worker:
+    resources:
+      limits:
+        ephemeral-storage: false

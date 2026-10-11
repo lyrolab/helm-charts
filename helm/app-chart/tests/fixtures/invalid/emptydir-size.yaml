@@ -1,0 +1,6 @@
+components:
+  worker:
+    volumes:
+    - name: tmp
+      emptyDir:
+        sizeLimit: {}

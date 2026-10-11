@@ -1,0 +1,58 @@
+stage: fixture
+components:
+  backend:
+    enabled: true
+    host: chat.example.invalid
+    image:
+      repository: example.invalid/backend
+    volumes:
+      - name: upload-tmp
+        emptyDir:
+          sizeLimit: 256Mi
+    volumeMounts:
+      - name: upload-tmp
+        mountPath: /var/lib/lyrochat/uploads
+        readOnly: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+        ephemeral-storage: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+        ephemeral-storage: 384Mi
+  worker:
+    enabled: true
+    image:
+      repository: example.invalid/backend
+    command: [node]
+    args: [dist/fixture-worker.js, '--label=spaces "quotes" \\ $HOME $(echo fixture) {{ .Values.stage }}']
+    service:
+      targetPort: 3001
+    ingress:
+      enabled: false
+    probes:
+      enabled: true
+      path: /healthz
+    volumes:
+      - name: decode-tmp
+        emptyDir:
+          sizeLimit: 64Mi
+    volumeMounts:
+      - name: decode-tmp
+        mountPath: /var/lib/lyrochat/decode
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+        ephemeral-storage: 64Mi
+      limits:
+        cpu: 1000m
+        memory: 768Mi
+        ephemeral-storage: 128Mi
+  frontend:
+    enabled: true
+    host: chat.example.invalid
+    image:
+      repository: example.invalid/frontend

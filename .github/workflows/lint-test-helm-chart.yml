@@ -38,3 +38,20 @@ jobs:
 
       - name: Helm unittest
         run: helm unittest helm/app-chart
+
+      - name: Render valid fixtures
+        run: |
+          for fixture in helm/app-chart/tests/fixtures/*.yaml; do
+            helm lint --strict helm/app-chart -f "$fixture"
+            helm template fixture helm/app-chart -f "$fixture" > /dev/null
+          done
+
+      - name: Reject invalid values
+        run: |
+          for fixture in helm/app-chart/tests/fixtures/invalid/*.yaml; do
+            if helm template fixture helm/app-chart -f "$fixture" > "$RUNNER_TEMP/schema-error.log" 2>&1; then
+              echo "Expected schema failure: $fixture"
+              exit 1
+            fi
+            grep -q "values don't meet the specifications of the schema" "$RUNNER_TEMP/schema-error.log"
+          done

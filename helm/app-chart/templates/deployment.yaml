@@ -51,10 +51,26 @@ spec:
                 {{- end }}
         {{- end }}
       {{- end }}
+      {{- with $component.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ $componentNameValue }}
           image: "{{ $component.image.repository }}:{{ $component.image.tag | default $.Values.defaults.image.tag }}"
           imagePullPolicy: {{ $component.image.pullPolicy | default $.Values.defaults.image.pullPolicy }}
+          {{- with $component.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $component.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $component.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ $component.service.targetPort }}

@@ -1,12 +1,11 @@
 name: Publish Helm Chart
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubicloud-standard-2
     steps:
       - name: Create GitHub App Token
