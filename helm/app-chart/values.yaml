@@ -137,3 +137,13 @@ keycloak:
   url: https://sso.lyrolab.fr
   clientId: app
   frontendClientId: app
+
+# Feature flags (Flipt). With `enabled`, the backend receives FLIPT_URL and
+# FLIPT_ENVIRONMENT. The environment defaults to `<fullname>-<stage>`, which
+# matches the Flipt environments named after the Kubernetes namespaces
+# (e.g. lyrochat-production). The API token stays in the backend secret as
+# FLIPT_TOKEN.
+featureFlags:
+  enabled: false
+  url: http://flipt.lyrolab-flipt.svc.cluster.local:8080
+  environment: ""

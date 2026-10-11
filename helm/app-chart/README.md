@@ -70,6 +70,9 @@ serviceAccount:
 - Every component mounts `<release>-<component>-secrets` as `envFrom` with `optional: true`, so the pod starts whether or not that secret exists.
 - `secretName` per component overrides the name; an explicit `secretName` is mounted without `optional`, so a missing secret blocks the pod instead of starting it without its configuration.
 
+### New in 0.6.0
+- `featureFlags` block: `FLIPT_URL` and `FLIPT_ENVIRONMENT` on the backend (see Environment Variables).
+
 ### Breaking changes in 0.5.0
 - Every component ingress sends security headers through a `configuration-snippet` (see Ingress). `X-Frame-Options: SAMEORIGIN` blocks cross-origin framing. Set `defaults.ingress.securityHeaders.enabled: false` to keep 0.4.0 behaviour.
 - `otel.enabled: false` is honoured, so `frontend` (off in the chart values) no longer receives `OTEL_EXPORTER_URL`. Set `components.frontend.otel.enabled: true` if it exports telemetry.
@@ -88,6 +91,7 @@ serviceAccount:
   - backend: `SERVER_URL`, `FRONTEND_URL` (if frontend enabled)
   - frontend: `NEXT_PUBLIC_BACKEND_URL` (if backend enabled)
 - With `keycloak.realm` set, the backend receives `KEYCLOAK_REALM`, `KEYCLOAK_URL` and `KEYCLOAK_CLIENT_ID`, and the frontend the `NEXT_PUBLIC_`/`VITE_` equivalents. `keycloak.url` (default `https://sso.lyrolab.fr`), `keycloak.clientId` (backend, default `app`) and `keycloak.frontendClientId` (frontend, default `app`) set the values.
+- With `featureFlags.enabled: true`, the backend receives `FLIPT_URL` (default `http://flipt.lyrolab-flipt.svc.cluster.local:8080`, the company Flipt) and `FLIPT_ENVIRONMENT` (default `<fullname>-<stage>`, e.g. `lyrochat-production`, overridable with `featureFlags.environment`). The API token is not a value: put `FLIPT_TOKEN` in the backend secret.
 - `OTEL_EXPORTER_URL` is set when OpenTelemetry is enabled for the component. `components.<name>.otel` is merged over `defaults.otel`, so `otel.enabled: false` on a component turns it off; the chart ships it on for `backend` and off for `frontend`.
 
 ### 6. Resources
