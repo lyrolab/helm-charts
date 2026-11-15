@@ -7,6 +7,13 @@
       "properties": {
         "resources": {
           "$ref": "#/definitions/resources"
+        },
+        "terminationGracePeriodSeconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
         }
       }
     },
@@ -87,6 +94,13 @@
           },
           "resources": {
             "$ref": "#/definitions/resources"
+          },
+          "terminationGracePeriodSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
           }
         }
       }

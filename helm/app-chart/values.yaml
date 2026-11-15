@@ -73,6 +73,10 @@ defaults:
   podDisruptionBudget:
     enabled: false
     maxUnavailable: 1
+  # Seconds Kubernetes waits after SIGTERM before killing a pod. Unset keeps the
+  # Kubernetes default (30). Raise it for components that drain long requests on
+  # shutdown; a component value overrides this one.
+  terminationGracePeriodSeconds:
   otel:
     enabled: true
     exporterUrl: "http://otelcol-collector.observability.svc.cluster.local:4317"
