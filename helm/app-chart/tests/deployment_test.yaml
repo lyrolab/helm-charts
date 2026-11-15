@@ -327,3 +327,28 @@ tests:
     - equal:
         path: spec.selector["app.kubernetes.io/component"]
         value: worker
+
+  - it: keeps the Kubernetes default grace period when none is set
+    template: templates/deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.terminationGracePeriodSeconds
+
+  - it: applies the default grace period to every component
+    set:
+      defaults.terminationGracePeriodSeconds: 60
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 60
+
+  - it: lets a component override the default grace period
+    set:
+      defaults.terminationGracePeriodSeconds: 60
+      components.backend.terminationGracePeriodSeconds: 150
+    template: templates/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 150

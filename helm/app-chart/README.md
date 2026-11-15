@@ -70,6 +70,9 @@ serviceAccount:
 - Every component mounts `<release>-<component>-secrets` as `envFrom` with `optional: true`, so the pod starts whether or not that secret exists.
 - `secretName` per component overrides the name; an explicit `secretName` is mounted without `optional`, so a missing secret blocks the pod instead of starting it without its configuration.
 
+### New in 0.8.0
+- `terminationGracePeriodSeconds` per component, with a fallback at `defaults.terminationGracePeriodSeconds` (see Component runtime). Unset keeps the Kubernetes default of 30 s.
+
 ### New in 0.7.0
 - Optional per-component `command`, `args`, `volumes` and `volumeMounts` (see Component runtime).
 - Values schema checks runtime field shapes and resource quantities, including `ephemeral-storage`.
@@ -113,6 +116,8 @@ serviceAccount:
 | `args` | Main container `args` | String list |
 | `volumes` | Pod `volumes` | Kubernetes Volume list |
 | `volumeMounts` | Main container `volumeMounts` | Kubernetes VolumeMount list |
+
+`terminationGracePeriodSeconds` (component, else `defaults`) sets the pod's shutdown grace period: how long Kubernetes waits after SIGTERM before killing the pod. Unset renders nothing and keeps the Kubernetes default of 30 s. Raise it for a component that finishes long requests on shutdown, and keep the application's own drain deadline below it.
 
 `command` and `args` work independently and pass argv unchanged. The chart adds no shell wrapper and does not evaluate templates or shell expressions. Use an explicit shell command if you need one. Missing, null or empty lists emit no keys, keeping image entrypoint defaults. Volumes and mounts belong only to their component; migration init containers receive no new mounts or resource limits.
 

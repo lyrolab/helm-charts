@@ -23,6 +23,9 @@ spec:
         {{- include "app.selectorLabels" $ | nindent 8 }}
         app.kubernetes.io/component: {{ $componentNameValue }}
     spec:
+      {{- with ($component.terminationGracePeriodSeconds | default $.Values.defaults.terminationGracePeriodSeconds) }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
       {{- if or $.Values.serviceAccount.create $.Values.serviceAccount.name }}
       serviceAccountName: {{ include "app.serviceAccountName" $ }}
       {{- end }}
