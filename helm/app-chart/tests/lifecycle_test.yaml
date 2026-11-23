@@ -1,0 +1,79 @@
+suite: component lifecycle
+templates:
+  - templates/deployment.yaml
+set:
+  components.backend.enabled: true
+  components.backend.image.repository: example.invalid/backend
+  components.frontend.enabled: true
+  components.frontend.image.repository: example.invalid/frontend
+tests:
+  - it: keeps serving during endpoint withdrawal before SIGTERM
+    set:
+      components.backend.terminationGracePeriodSeconds: 40
+      components.backend.lifecycle:
+        preStop:
+          sleep:
+            seconds: 10
+    documentSelector:
+      path: metadata.labels["app.kubernetes.io/component"]
+      value: backend
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].lifecycle
+          value:
+            preStop:
+              sleep:
+                seconds: 10
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 40
+      - notExists:
+          path: spec.template.spec.initContainers[0].lifecycle
+
+  - it: accepts exec hooks as literal argv without template evaluation
+    set:
+      components.backend.lifecycle:
+        preStop:
+          exec:
+            command: ["/drain", "{{ .Values.stage }}", "$HOME", "$(echo fixture)"]
+    documentSelector:
+      path: metadata.labels["app.kubernetes.io/component"]
+      value: backend
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].lifecycle.preStop.exec.command
+          value: ["/drain", "{{ .Values.stage }}", "$HOME", "$(echo fixture)"]
+
+  - it: confines hooks and grace period to the selected component
+    set:
+      components.backend.terminationGracePeriodSeconds: 40
+      components.backend.lifecycle:
+        preStop:
+          sleep:
+            seconds: 10
+    documentSelector:
+      path: metadata.labels["app.kubernetes.io/component"]
+      value: frontend
+    asserts: &absentLifecycle
+      - notExists:
+          path: spec.template.spec.containers[0].lifecycle
+      - notExists:
+          path: spec.template.spec.terminationGracePeriodSeconds
+
+  - it: omits an absent lifecycle
+    documentSelector: &backend
+      path: metadata.labels["app.kubernetes.io/component"]
+      value: backend
+    asserts: *absentLifecycle
+
+  - it: omits a null lifecycle
+    set:
+      components.backend.lifecycle: null
+    documentSelector: *backend
+    asserts: *absentLifecycle
+
+  - it: omits an empty lifecycle
+    set:
+      components.backend.lifecycle: {}
+    documentSelector: *backend
+    asserts: *absentLifecycle

@@ -62,6 +62,10 @@ spec:
         - name: {{ $componentNameValue }}
           image: "{{ $component.image.repository }}:{{ $component.image.tag | default $.Values.defaults.image.tag }}"
           imagePullPolicy: {{ $component.image.pullPolicy | default $.Values.defaults.image.pullPolicy }}
+          {{- with $component.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with $component.command }}
           command:
             {{- toYaml . | nindent 12 }}
