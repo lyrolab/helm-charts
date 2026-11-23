@@ -117,7 +117,19 @@ serviceAccount:
 | `volumes` | Pod `volumes` | Kubernetes Volume list |
 | `volumeMounts` | Main container `volumeMounts` | Kubernetes VolumeMount list |
 
-`terminationGracePeriodSeconds` (component, else `defaults`) sets the pod's shutdown grace period: how long Kubernetes waits after SIGTERM before killing the pod. Unset renders nothing and keeps the Kubernetes default of 30 s. Raise it for a component that finishes long requests on shutdown, and keep the application's own drain deadline below it.
+`terminationGracePeriodSeconds` (component, else `defaults`) sets the pod's total shutdown budget, including any preStop hook and application shutdown after SIGTERM. Unset renders nothing and keeps the Kubernetes default of 30 s. Keep the hook and application's drain deadline within this budget.
+
+`components.<name>.lifecycle` passes a Kubernetes lifecycle object to the main container only. Omitted, null or empty objects render nothing. A preStop delay keeps the application serving while Kubernetes removes the terminating pod from endpoints, before SIGTERM starts application shutdown. The native sleep handler requires Kubernetes 1.29 or newer with `PodLifecycleSleepAction` enabled (stable in 1.33):
+
+```yaml
+components:
+  backend:
+    terminationGracePeriodSeconds: 40
+    lifecycle:
+      preStop:
+        sleep:
+          seconds: 10
+```
 
 `command` and `args` work independently and pass argv unchanged. The chart adds no shell wrapper and does not evaluate templates or shell expressions. Use an explicit shell command if you need one. Missing, null or empty lists emit no keys, keeping image entrypoint defaults. Volumes and mounts belong only to their component; migration init containers receive no new mounts or resource limits.
 

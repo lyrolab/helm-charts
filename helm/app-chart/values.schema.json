@@ -22,6 +22,9 @@
       "additionalProperties": {
         "type": "object",
         "properties": {
+          "lifecycle": {
+            "type": ["object", "null"]
+          },
           "command": {
             "$ref": "#/definitions/argv"
           },
