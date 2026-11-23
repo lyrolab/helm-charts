@@ -1,0 +1,3 @@
+components:
+  backend:
+    lifecycle: sleep 10

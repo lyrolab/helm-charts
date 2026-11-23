@@ -1,0 +1,10 @@
+components:
+  backend:
+    enabled: true
+    image:
+      repository: example.invalid/backend
+    terminationGracePeriodSeconds: 40
+    lifecycle:
+      preStop:
+        sleep:
+          seconds: 10
